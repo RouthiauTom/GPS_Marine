@@ -61,6 +61,27 @@ button {
   font-weight: 650;
 }
 
+#track-status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #aeb8c2;
+}
+
+.track-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.track-actions button {
+  margin-top: 8px;
+  padding: 10px 6px;
+}
+
+button:disabled {
+  opacity: .5;
+}
+
 .boat {
   width: 0;
   height: 0;

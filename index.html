@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V0.4</title>
+  <title>Marine GPS V0.5</title>
 
   <link
     href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
@@ -17,7 +17,7 @@
   <div id="map"></div>
 
   <div class="panel">
-    <div class="title">⚓ Marine GPS — V0.4</div>
+    <div class="title">⚓ Marine GPS — V0.5</div>
 
     <div class="data">
       <div><span class="label">Latitude</span><br><span id="lat">—</span></div>
@@ -29,6 +29,12 @@
 
     <div id="status">GPS : attente d'autorisation…</div>
     <button id="locate">📍 Recentrer sur le bateau</button>
+    <div id="track-status" aria-live="polite">Trace arrêtée</div>
+    <div class="track-actions">
+      <button id="track-start" disabled>Démarrer</button>
+      <button id="track-stop" disabled>Arrêter</button>
+      <button id="track-clear" disabled>Effacer</button>
+    </div>
   </div>
 
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
