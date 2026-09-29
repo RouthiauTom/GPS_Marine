@@ -18,12 +18,13 @@ export function initializeMap(containerId) {
 
     return new window.maplibregl.Marker({
       element,
-      anchor: 'bottom'
+      anchor: 'bottom',
+      rotationAlignment: 'map'
     });
   }
 
   return {
-    updateBoatPosition(position) {
+    updateBoatPosition(position, course = null) {
       const coordinates = [position.longitude, position.latitude];
 
       if (!boatMarker) {
@@ -32,6 +33,8 @@ export function initializeMap(containerId) {
       } else {
         boatMarker.setLngLat(coordinates);
       }
+
+      boatMarker.setRotation(Number.isFinite(course) ? course : 0);
     },
 
     centerOnBoat(zoom = Math.max(map.getZoom(), 15)) {
