@@ -17,7 +17,15 @@ export function initializeMap(containerId) {
   let activeRoute = null;
 
   function trackFeatureCollection() {
-    if (trackCoordinates.length < 2) {
+    const segments = new Map();
+    trackCoordinates.forEach(point => {
+      const segmentIndex = Number.isInteger(point.segment) ? point.segment : 0;
+      if (!segments.has(segmentIndex)) segments.set(segmentIndex, []);
+      segments.get(segmentIndex).push([point.longitude, point.latitude]);
+    });
+    const coordinates = Array.from(segments.values()).filter(segment => segment.length > 1);
+
+    if (coordinates.length === 0) {
       return { type: 'FeatureCollection', features: [] };
     }
 
@@ -27,8 +35,8 @@ export function initializeMap(containerId) {
         type: 'Feature',
         properties: {},
         geometry: {
-          type: 'LineString',
-          coordinates: trackCoordinates
+          type: coordinates.length === 1 ? 'LineString' : 'MultiLineString',
+          coordinates: coordinates.length === 1 ? coordinates[0] : coordinates
         }
       }]
     };
@@ -237,7 +245,7 @@ export function initializeMap(containerId) {
     },
 
     updateTrack(track) {
-      trackCoordinates = track.points.map(point => [point.longitude, point.latitude]);
+      trackCoordinates = track.points;
       renderTrack();
     },
 

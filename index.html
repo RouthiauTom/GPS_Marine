@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V0.7</title>
+  <title>Marine GPS V0.8</title>
 
   <link
     href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
@@ -18,8 +18,9 @@
 
   <header class="panel">
     <div class="panel-heading">
-      <div class="title">Marine GPS <span>V0.7</span></div>
+      <div class="title">Marine GPS <span>V0.8</span></div>
       <div id="status" role="status">GPS : attente d'autorisation…</div>
+      <button id="open-gpx" class="gpx-action" aria-label="Importer ou exporter GPX" title="Importer ou exporter GPX">GPX</button>
     </div>
 
     <div class="instruments" aria-label="Instruments GPS">
@@ -134,6 +135,38 @@
         <button value="delete" class="danger-action">Supprimer</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="gpx-dialog" class="app-dialog">
+    <div class="sheet-heading">
+      <h2>Échange GPX</h2>
+      <button id="close-gpx" class="icon-button" aria-label="Fermer GPX">×</button>
+    </div>
+    <p>Importer ou exporter les waypoints, routes et traces.</p>
+    <input id="gpx-file" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
+    <div class="gpx-actions">
+      <button id="import-gpx" class="primary-action">Importer GPX</button>
+      <button id="export-gpx" disabled>Exporter la sélection</button>
+    </div>
+    <div class="export-select-actions">
+      <button id="select-all-export">Tout sélectionner</button>
+      <button id="clear-all-export">Tout désélectionner</button>
+    </div>
+    <div class="export-groups">
+      <fieldset class="export-group">
+        <legend><input type="checkbox" data-export-category="waypoints" checked> Waypoints</legend>
+        <div id="export-waypoints" class="export-items"></div>
+      </fieldset>
+      <fieldset class="export-group">
+        <legend><input type="checkbox" data-export-category="routes" checked> Routes</legend>
+        <div id="export-routes" class="export-items"></div>
+      </fieldset>
+      <fieldset class="export-group">
+        <legend><input type="checkbox" data-export-category="tracks" checked> Traces</legend>
+        <div id="export-tracks" class="export-items"></div>
+      </fieldset>
+    </div>
+    <p id="gpx-status" role="status" aria-live="polite"></p>
   </dialog>
 
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>

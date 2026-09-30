@@ -65,6 +65,19 @@ export async function loadLatestTrack() {
   });
 }
 
+export async function loadTracks() {
+  const database = await openDatabase();
+  const transaction = database.transaction(TRACK_STORE, 'readonly');
+  const request = transaction.objectStore(TRACK_STORE).getAll();
+
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => {
+      resolve(request.result.sort((first, second) => first.startedAt - second.startedAt));
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function deleteTrack(trackId) {
   const database = await openDatabase();
   const transaction = database.transaction(TRACK_STORE, 'readwrite');
@@ -143,6 +156,27 @@ export async function deleteRoute(routeId) {
   const database = await openDatabase();
   const transaction = database.transaction(ROUTE_STORE, 'readwrite');
   transaction.objectStore(ROUTE_STORE).delete(routeId);
+
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function saveGpxData(data) {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [WAYPOINT_STORE, ROUTE_STORE, TRACK_STORE],
+    'readwrite'
+  );
+  const waypoints = transaction.objectStore(WAYPOINT_STORE);
+  const routes = transaction.objectStore(ROUTE_STORE);
+  const tracks = transaction.objectStore(TRACK_STORE);
+
+  data.waypoints.forEach(waypoint => waypoints.put(waypoint));
+  data.routes.forEach(route => routes.put(route));
+  data.tracks.forEach(track => tracks.put({ ...track, updatedAt: Date.now() }));
 
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();

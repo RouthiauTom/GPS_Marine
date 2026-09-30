@@ -15,9 +15,11 @@ import {
   deleteWaypoint,
   loadLatestTrack,
   loadRoutes,
+  loadTracks,
   loadWaypoints,
   saveTrack,
   saveRoute,
+  saveGpxData,
   saveWaypoint
 } from './storage.js';
 import {
@@ -38,6 +40,7 @@ import {
   toggleRouteVisibility,
   undoRoutePoint
 } from './route.js';
+import { createGpx, parseGpx } from './gpx.js';
 
 const getElement = id => document.getElementById(id);
 const map = initializeMap('map');
@@ -52,6 +55,7 @@ let waypointPendingDeletion = null;
 let routeStorageAvailable = true;
 let routeStorageInitialized = false;
 let routePendingDeletion = null;
+let gpxExportData = { waypoints: [], routes: [], tracks: [] };
 
 function setTrackStatus(message) {
   getElement('track-status').textContent = message;
@@ -223,6 +227,202 @@ function leaveRouteCreationMode() {
   getElement('route-editor').hidden = true;
   getElement('map-actions').hidden = false;
   updateRouteControls();
+}
+
+function setGpxStatus(message) {
+  getElement('gpx-status').textContent = message;
+}
+
+async function importGpxFile(file) {
+  if (isTracking()) {
+    setGpxStatus('Arrêtez l’enregistrement de trace avant l’import.');
+    return;
+  }
+
+  const importButton = getElement('import-gpx');
+  importButton.disabled = true;
+
+  try {
+    const importedData = parseGpx(await file.text());
+    const totalItems =
+      importedData.waypoints.length + importedData.routes.length + importedData.tracks.length;
+    if (totalItems === 0) throw new Error('Ce fichier GPX ne contient aucun élément exploitable.');
+
+    const previousWaypoints = getWaypoints();
+    const previousRoutes = getRoutes();
+    const updatedWaypoints = [...previousWaypoints, ...importedData.waypoints];
+    const updatedRoutes = setRoutes([...previousRoutes, ...importedData.routes]);
+    const addedRoutes = updatedRoutes.slice(previousRoutes.length);
+
+    try {
+      await saveGpxData({
+        waypoints: importedData.waypoints,
+        routes: addedRoutes,
+        tracks: importedData.tracks
+      });
+    } catch (error) {
+      setWaypoints(previousWaypoints);
+      setRoutes(previousRoutes);
+      throw error;
+    }
+
+    setWaypoints(updatedWaypoints);
+    renderWaypoints();
+    setRoutes(updatedRoutes);
+    renderRoutes();
+
+    if (importedData.tracks.length > 0) {
+      const latestImportedTrack = importedData.tracks.at(-1);
+      const restoredTrack = restoreTrack(latestImportedTrack);
+      map.updateTrack(restoredTrack);
+      setTrackStatus(`Trace importée · ${restoredTrack.points.length} points`);
+      updateTrackControls();
+    }
+
+    await refreshExportSelection();
+    const summary = [
+      `${importedData.waypoints.length} waypoint(s)`,
+      `${importedData.routes.length} route(s)`,
+      `${importedData.tracks.length} trace(s)`
+    ].join(' · ');
+    setGpxStatus(`Import terminé : ${summary}.`);
+  } catch (error) {
+    setGpxStatus(error.message || 'Impossible d’importer ce fichier GPX.');
+  } finally {
+    importButton.disabled = false;
+    getElement('gpx-file').value = '';
+  }
+}
+
+async function exportGpxFile() {
+  const exportButton = getElement('export-gpx');
+  exportButton.disabled = true;
+
+  try {
+    const selected = kind => new Set(
+      Array.from(document.querySelectorAll(`[data-export-kind="${kind}"]:checked`))
+        .map(input => input.dataset.exportId)
+    );
+    const selectedWaypoints = selected('waypoints');
+    const selectedRoutes = selected('routes');
+    const selectedTracks = selected('tracks');
+    const waypoints = gpxExportData.waypoints.filter(item => selectedWaypoints.has(item.id));
+    const routes = gpxExportData.routes.filter(item => selectedRoutes.has(item.id));
+    const tracks = gpxExportData.tracks.filter(item => selectedTracks.has(item.id));
+    const totalSelected = waypoints.length + routes.length + tracks.length;
+    if (totalSelected === 0) return;
+
+    const xml = createGpx({ waypoints, routes, tracks });
+    const blob = new Blob([xml], { type: 'application/gpx+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.href = url;
+    link.download = `marine-gps-selection-${timestamp}.gpx`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setGpxStatus(
+      `Export prêt : ${waypoints.length} waypoint(s), ${routes.length} route(s), ${tracks.length} trace(s).`
+    );
+  } catch {
+    setGpxStatus('Impossible de lire les données pour l’export GPX.');
+  } finally {
+    exportButton.disabled = false;
+  }
+}
+
+function updateExportSelectionState() {
+  const kinds = ['waypoints', 'routes', 'tracks'];
+  let total = 0;
+  let selected = 0;
+
+  kinds.forEach(kind => {
+    const items = Array.from(document.querySelectorAll(`[data-export-kind="${kind}"]`));
+    const category = document.querySelector(`[data-export-category="${kind}"]`);
+    const selectedCount = items.filter(item => item.checked).length;
+    total += items.length;
+    selected += selectedCount;
+    category.disabled = items.length === 0;
+    category.checked = items.length > 0 && selectedCount === items.length;
+    category.indeterminate = selectedCount > 0 && selectedCount < items.length;
+  });
+
+  getElement('export-gpx').disabled = selected === 0;
+  getElement('select-all-export').disabled = total === 0 || selected === total;
+  getElement('clear-all-export').disabled = selected === 0;
+}
+
+function renderExportCategory(kind, items, labelForItem, emptyMessage) {
+  const container = getElement(`export-${kind}`);
+  container.replaceChildren();
+
+  if (items.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'export-empty';
+    empty.textContent = emptyMessage;
+    container.append(empty);
+    return;
+  }
+
+  items.forEach(item => {
+    const label = document.createElement('label');
+    label.className = 'export-item';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true;
+    checkbox.dataset.exportKind = kind;
+    checkbox.dataset.exportId = item.id;
+    const text = document.createElement('span');
+    text.textContent = labelForItem(item);
+    label.append(checkbox, text);
+    container.append(label);
+  });
+}
+
+async function refreshExportSelection() {
+  getElement('export-gpx').disabled = true;
+  setGpxStatus('Chargement des éléments…');
+
+  try {
+    const [waypoints, routes, tracks] = await Promise.all([
+      loadWaypoints(),
+      loadRoutes(),
+      loadTracks()
+    ]);
+    gpxExportData = { waypoints, routes, tracks };
+
+    renderExportCategory(
+      'waypoints',
+      waypoints,
+      waypoint => `${waypoint.name} · ${waypoint.latitude.toFixed(4)}°, ${waypoint.longitude.toFixed(4)}°`,
+      'Aucun waypoint'
+    );
+    renderExportCategory(
+      'routes',
+      routes,
+      route => `${route.name} · ${route.points.length} points`,
+      'Aucune route'
+    );
+    renderExportCategory(
+      'tracks',
+      tracks,
+      track => `${track.name || 'Trace'} · ${track.points.length} points · ${new Date(track.startedAt).toLocaleDateString('fr-FR')}`,
+      'Aucune trace'
+    );
+    setGpxStatus('');
+    updateExportSelectionState();
+  } catch {
+    setGpxStatus('Impossible de lire les données locales.');
+  }
+}
+
+function setAllExportSelections(checked) {
+  document.querySelectorAll('[data-export-kind]').forEach(input => {
+    input.checked = checked;
+  });
+  updateExportSelectionState();
 }
 
 function beginRouteCreation() {
@@ -463,6 +663,47 @@ getElement('toggle-routes').addEventListener('click', event => {
 });
 
 getElement('close-routes').addEventListener('click', closeRouteSheet);
+
+getElement('open-gpx').addEventListener('click', () => {
+  setGpxStatus(isTracking()
+    ? 'Arrêtez l’enregistrement de trace avant l’import GPX.'
+    : '');
+  getElement('gpx-dialog').showModal();
+  refreshExportSelection();
+});
+
+getElement('close-gpx').addEventListener('click', () => {
+  getElement('gpx-dialog').close();
+});
+
+getElement('import-gpx').addEventListener('click', () => {
+  if (isTracking()) {
+    setGpxStatus('Arrêtez l’enregistrement de trace avant l’import.');
+    return;
+  }
+
+  getElement('gpx-file').click();
+});
+
+getElement('gpx-file').addEventListener('change', event => {
+  const file = event.currentTarget.files[0];
+  if (file) importGpxFile(file);
+});
+
+getElement('export-gpx').addEventListener('click', exportGpxFile);
+
+getElement('select-all-export').addEventListener('click', () => setAllExportSelections(true));
+getElement('clear-all-export').addEventListener('click', () => setAllExportSelections(false));
+getElement('gpx-dialog').addEventListener('change', event => {
+  const category = event.target.dataset.exportCategory;
+  if (category) {
+    document.querySelectorAll(`[data-export-kind="${category}"]`).forEach(input => {
+      input.checked = event.target.checked;
+    });
+  }
+
+  updateExportSelectionState();
+});
 
 getElement('delete-route-dialog').addEventListener('close', async event => {
   if (event.currentTarget.returnValue !== 'delete' || !routePendingDeletion) return;

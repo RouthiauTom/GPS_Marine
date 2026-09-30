@@ -52,12 +52,26 @@ html, body {
 }
 
 #status {
+  min-width: 0;
+  flex: 1;
+}
+
+#status {
   overflow: hidden;
   color: #ffd166;
   font-size: 11px;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.gpx-action {
+  min-width: 42px;
+  min-height: 34px;
+  padding: 6px;
+  background: rgba(255, 255, 255, .12);
+  color: white;
+  font-size: 11px;
 }
 
 .instruments {
@@ -383,7 +397,9 @@ button:disabled {
 
 .app-dialog {
   width: min(420px, calc(100% - 32px));
+  max-height: min(90dvh, 720px);
   padding: 20px;
+  overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, .15);
   border-radius: 12px;
   background: #172126;
@@ -426,6 +442,99 @@ button:disabled {
 
 .dialog-actions button {
   min-width: 96px;
+}
+
+.gpx-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.gpx-actions button {
+  min-height: 46px;
+  padding: 8px;
+}
+
+.export-select-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.export-select-actions button {
+  min-height: 36px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, .1);
+  color: white;
+  font-size: 11px;
+}
+
+.export-groups {
+  display: grid;
+  gap: 8px;
+}
+
+.export-group {
+  min-width: 0;
+  margin: 0;
+  padding: 6px 10px 9px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 8px;
+}
+
+.export-group legend {
+  padding: 0 5px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.export-group legend input,
+.export-item input {
+  width: 20px;
+  min-height: 20px;
+  margin: 0 4px 0 0;
+  accent-color: #24d6a2;
+  vertical-align: middle;
+}
+
+.export-items {
+  display: grid;
+  gap: 2px;
+}
+
+.export-item {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 4px;
+  border-radius: 5px;
+  color: white;
+  font-size: 12px;
+}
+
+.export-item:has(input:checked) {
+  background: rgba(36, 214, 162, .08);
+}
+
+.export-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-empty {
+  padding: 5px 4px;
+  color: #aeb8c2;
+  font-size: 11px;
+}
+
+#gpx-status {
+  min-height: 1em;
+  margin-bottom: 0;
 }
 
 .danger-action {
