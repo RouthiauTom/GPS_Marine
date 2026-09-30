@@ -1,6 +1,7 @@
 const DATABASE_NAME = 'marine-gps';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const TRACK_STORE = 'tracks';
+const WAYPOINT_STORE = 'waypoints';
 
 let databasePromise;
 
@@ -17,6 +18,9 @@ function openDatabase() {
         const database = request.result;
         if (!database.objectStoreNames.contains(TRACK_STORE)) {
           database.createObjectStore(TRACK_STORE, { keyPath: 'id' });
+        }
+        if (!database.objectStoreNames.contains(WAYPOINT_STORE)) {
+          database.createObjectStore(WAYPOINT_STORE, { keyPath: 'id' });
         }
       };
 
@@ -61,6 +65,43 @@ export async function deleteTrack(trackId) {
   const database = await openDatabase();
   const transaction = database.transaction(TRACK_STORE, 'readwrite');
   transaction.objectStore(TRACK_STORE).delete(trackId);
+
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function saveWaypoint(waypoint) {
+  const database = await openDatabase();
+  const transaction = database.transaction(WAYPOINT_STORE, 'readwrite');
+  transaction.objectStore(WAYPOINT_STORE).put(waypoint);
+
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function loadWaypoints() {
+  const database = await openDatabase();
+  const transaction = database.transaction(WAYPOINT_STORE, 'readonly');
+  const request = transaction.objectStore(WAYPOINT_STORE).getAll();
+
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => {
+      resolve(request.result.sort((first, second) => first.createdAt - second.createdAt));
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function deleteWaypoint(waypointId) {
+  const database = await openDatabase();
+  const transaction = database.transaction(WAYPOINT_STORE, 'readwrite');
+  transaction.objectStore(WAYPOINT_STORE).delete(waypointId);
 
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();

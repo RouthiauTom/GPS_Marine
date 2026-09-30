@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V0.5</title>
+  <title>Marine GPS V0.6</title>
 
   <link
     href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
@@ -16,26 +16,81 @@
 <body>
   <div id="map"></div>
 
-  <div class="panel">
-    <div class="title">⚓ Marine GPS — V0.5</div>
-
-    <div class="data">
-      <div><span class="label">Latitude</span><br><span id="lat">—</span></div>
-      <div><span class="label">Longitude</span><br><span id="lon">—</span></div>
-      <div><span class="label">SOG</span><br><span id="speed">—</span></div>
-      <div><span class="label">COG</span><br><span id="course">—</span></div>
-      <div><span class="label">Précision</span><br><span id="accuracy">—</span></div>
+  <header class="panel">
+    <div class="panel-heading">
+      <div class="title">Marine GPS <span>V0.6</span></div>
+      <div id="status" role="status">GPS : attente d'autorisation…</div>
     </div>
 
-    <div id="status">GPS : attente d'autorisation…</div>
-    <button id="locate">📍 Recentrer sur le bateau</button>
-    <div id="track-status" aria-live="polite">Trace arrêtée</div>
-    <div class="track-actions">
-      <button id="track-start" disabled>Démarrer</button>
-      <button id="track-stop" disabled>Arrêter</button>
-      <button id="track-clear" disabled>Effacer</button>
+    <div class="instruments" aria-label="Instruments GPS">
+      <div class="instrument instrument-primary">
+        <span class="label">SOG</span>
+        <strong id="speed">—</strong>
+      </div>
+      <div class="instrument instrument-primary">
+        <span class="label">COG</span>
+        <strong id="course">—</strong>
+      </div>
+      <div class="instrument">
+        <span class="label">Précision</span>
+        <strong id="accuracy">—</strong>
+      </div>
     </div>
-  </div>
+
+    <div class="coordinates">
+      <span>Lat <strong id="lat">—</strong></span>
+      <span>Lon <strong id="lon">—</strong></span>
+    </div>
+
+    <div class="track-row">
+      <span id="track-status" aria-live="polite">Trace arrêtée</span>
+      <div class="track-actions">
+        <button id="track-start" disabled>Démarrer</button>
+        <button id="track-stop" disabled>Arrêter</button>
+        <button id="track-clear" disabled>Effacer</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="map-actions" aria-label="Actions carte">
+    <button id="add-waypoint" class="primary-action" disabled>＋ Ajouter un waypoint</button>
+    <button id="toggle-waypoints" aria-expanded="false">Waypoints <span id="waypoint-count">0</span></button>
+    <button id="locate" class="locate-action" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">◎</button>
+  </nav>
+
+  <section id="waypoint-sheet" class="waypoint-sheet" aria-labelledby="waypoint-heading" hidden>
+    <div class="sheet-heading">
+      <h2 id="waypoint-heading">Waypoints</h2>
+      <button id="close-waypoints" class="icon-button" aria-label="Fermer la liste">×</button>
+    </div>
+    <p id="waypoint-empty">Aucun waypoint enregistré.</p>
+    <p id="waypoint-notice" class="waypoint-notice" aria-live="polite"></p>
+    <ul id="waypoint-list"></ul>
+  </section>
+
+  <dialog id="waypoint-dialog" class="app-dialog">
+    <form id="waypoint-form">
+      <h2>Nouveau waypoint</h2>
+      <p id="waypoint-position"></p>
+      <label for="waypoint-name">Nom</label>
+      <input id="waypoint-name" name="name" maxlength="32" required autocomplete="off">
+      <div class="dialog-actions">
+        <button type="button" id="cancel-waypoint">Annuler</button>
+        <button type="submit" class="primary-action">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="delete-dialog" class="app-dialog">
+    <form method="dialog">
+      <h2>Supprimer ce waypoint ?</h2>
+      <p id="delete-waypoint-name"></p>
+      <div class="dialog-actions">
+        <button value="cancel">Annuler</button>
+        <button value="delete" class="danger-action">Supprimer</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <script type="module" src="./js/app.js"></script>

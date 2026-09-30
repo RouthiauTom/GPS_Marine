@@ -9,7 +9,20 @@ import {
   startTracking,
   stopTracking
 } from './track.js';
-import { deleteTrack, loadLatestTrack, saveTrack } from './storage.js';
+import {
+  deleteTrack,
+  deleteWaypoint,
+  loadLatestTrack,
+  loadWaypoints,
+  saveTrack,
+  saveWaypoint
+} from './storage.js';
+import {
+  createWaypoint,
+  getWaypoints,
+  removeWaypoint,
+  setWaypoints
+} from './waypoint.js';
 
 const getElement = id => document.getElementById(id);
 const map = initializeMap('map');
@@ -17,6 +30,10 @@ let firstFix = true;
 const MIN_COG_SPEED = 0.5;
 let trackStorageAvailable = true;
 let trackStorageInitialized = false;
+let waypointStorageAvailable = true;
+let waypointStorageInitialized = false;
+let latestPosition = null;
+let waypointPendingDeletion = null;
 
 function setTrackStatus(message) {
   getElement('track-status').textContent = message;
@@ -37,7 +54,65 @@ function persistTrack(track) {
   });
 }
 
+function updateWaypointControls() {
+  getElement('add-waypoint').disabled = !waypointStorageInitialized || !latestPosition;
+}
+
+function renderWaypoints() {
+  const waypoints = getWaypoints();
+  const list = getElement('waypoint-list');
+  list.replaceChildren();
+  getElement('waypoint-count').textContent = String(waypoints.length);
+  getElement('waypoint-empty').hidden = waypoints.length > 0;
+  map.updateWaypoints(waypoints);
+
+  waypoints.forEach((waypoint, index) => {
+    const row = document.createElement('li');
+    row.className = 'waypoint-row';
+
+    const info = document.createElement('div');
+    info.className = 'waypoint-info';
+    const name = document.createElement('strong');
+    name.textContent = `${index + 1}. ${waypoint.name}`;
+    const coordinates = document.createElement('span');
+    coordinates.textContent =
+      `${waypoint.latitude.toFixed(5)}°, ${waypoint.longitude.toFixed(5)}°`;
+    info.append(name, coordinates);
+
+    const controls = document.createElement('div');
+    controls.className = 'waypoint-controls';
+    const centerButton = document.createElement('button');
+    centerButton.type = 'button';
+    centerButton.textContent = 'Centrer';
+    centerButton.addEventListener('click', () => {
+      map.centerOnWaypoint(waypoint);
+      closeWaypointSheet();
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'delete-waypoint';
+    deleteButton.textContent = 'Supprimer';
+    deleteButton.addEventListener('click', () => {
+      waypointPendingDeletion = waypoint.id;
+      getElement('delete-waypoint-name').textContent = waypoint.name;
+      getElement('delete-dialog').showModal();
+    });
+
+    controls.append(centerButton, deleteButton);
+    row.append(info, controls);
+    list.append(row);
+  });
+}
+
+function closeWaypointSheet() {
+  getElement('waypoint-sheet').hidden = true;
+  getElement('toggle-waypoints').setAttribute('aria-expanded', 'false');
+}
+
 function updateInterface(position) {
+  latestPosition = position;
+  updateWaypointControls();
   getElement('lat').textContent = position.latitude.toFixed(6) + '°';
   getElement('lon').textContent = position.longitude.toFixed(6) + '°';
   getElement('accuracy').textContent = position.accuracy
@@ -118,6 +193,75 @@ getElement('track-clear').addEventListener('click', async () => {
   updateTrackControls();
 });
 
+getElement('add-waypoint').addEventListener('click', () => {
+  if (!latestPosition) return;
+
+  const nextNumber = getWaypoints().length + 1;
+  getElement('waypoint-position').textContent =
+    `${latestPosition.latitude.toFixed(6)}°, ${latestPosition.longitude.toFixed(6)}°`;
+  getElement('waypoint-name').value = `Waypoint ${nextNumber}`;
+  getElement('waypoint-dialog').showModal();
+  getElement('waypoint-name').select();
+});
+
+getElement('cancel-waypoint').addEventListener('click', () => {
+  getElement('waypoint-dialog').close();
+});
+
+getElement('waypoint-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const name = getElement('waypoint-name').value.trim();
+  if (!name || !latestPosition) return;
+
+  const saveButton = event.currentTarget.querySelector('[type="submit"]');
+  saveButton.disabled = true;
+  const waypoint = createWaypoint(latestPosition, name);
+
+  if (waypointStorageAvailable) {
+    try {
+      await saveWaypoint(waypoint);
+      getElement('waypoint-notice').textContent = 'Waypoint enregistré';
+    } catch {
+      waypointStorageAvailable = false;
+      getElement('waypoint-notice').textContent =
+        'Sauvegarde locale indisponible ; waypoint gardé en session';
+    }
+  }
+
+  renderWaypoints();
+  getElement('waypoint-dialog').close();
+  getElement('waypoint-form').reset();
+  saveButton.disabled = false;
+});
+
+getElement('delete-dialog').addEventListener('close', async event => {
+  if (event.currentTarget.returnValue !== 'delete' || !waypointPendingDeletion) return;
+
+  const waypointId = waypointPendingDeletion;
+  waypointPendingDeletion = null;
+  removeWaypoint(waypointId);
+  renderWaypoints();
+
+  if (waypointStorageAvailable) {
+    try {
+      await deleteWaypoint(waypointId);
+      getElement('waypoint-notice').textContent = 'Waypoint supprimé';
+    } catch {
+      waypointStorageAvailable = false;
+      getElement('waypoint-notice').textContent =
+        'Waypoint supprimé de la session ; suppression locale impossible';
+    }
+  }
+});
+
+getElement('toggle-waypoints').addEventListener('click', event => {
+  const sheet = getElement('waypoint-sheet');
+  sheet.hidden = !sheet.hidden;
+  event.currentTarget.setAttribute('aria-expanded', String(!sheet.hidden));
+});
+
+getElement('close-waypoints').addEventListener('click', closeWaypointSheet);
+
 async function initializeTrack() {
   try {
     const savedTrack = await loadLatestTrack();
@@ -135,6 +279,22 @@ async function initializeTrack() {
   updateTrackControls();
 }
 
+async function initializeWaypoints() {
+  try {
+    setWaypoints(await loadWaypoints());
+  } catch {
+    waypointStorageAvailable = false;
+    getElement('waypoint-notice').textContent =
+      'Stockage local indisponible ; waypoints gardés en session';
+  }
+
+  renderWaypoints();
+  waypointStorageInitialized = true;
+  updateWaypointControls();
+}
+
 updateTrackControls();
+updateWaypointControls();
 initializeTrack();
+initializeWaypoints();
 startWatching(updateInterface, showGpsError);

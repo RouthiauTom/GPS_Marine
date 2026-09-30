@@ -18,68 +18,341 @@ html, body {
   z-index: 10;
   left: 12px;
   right: 12px;
-  top: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(20, 25, 30, .88);
+  top: max(12px, env(safe-area-inset-top));
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  background: rgba(18, 25, 29, .94);
   color: white;
   backdrop-filter: blur(8px);
   box-shadow: 0 3px 18px rgba(0,0,0,.25);
 }
 
+.panel-heading,
+.track-row,
+.sheet-heading,
+.waypoint-row,
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .title {
   font-weight: 700;
-  margin-bottom: 8px;
+  font-size: 15px;
 }
 
-.data {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px 18px;
-  font-size: 14px;
+.title span {
+  margin-left: 4px;
+  color: #aeb8c2;
+  font-size: 11px;
+  font-weight: 500;
 }
-
-.data div:last-child {
-  grid-column: 1 / -1;
-}
-
-.label { color: #aeb8c2; }
 
 #status {
-  margin-top: 9px;
-  font-size: 13px;
+  overflow: hidden;
   color: #ffd166;
+  font-size: 11px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instruments {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.instrument {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .07);
+}
+
+.instrument strong {
+  overflow: hidden;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instrument-primary strong {
+  font-size: 20px;
+}
+
+.label {
+  color: #aeb8c2;
+  font-size: 10px;
+}
+
+.coordinates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  color: #aeb8c2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.coordinates strong {
+  color: white;
+  font-weight: 500;
 }
 
 button {
-  margin-top: 10px;
+  min-height: 40px;
   border: 0;
-  border-radius: 10px;
-  padding: 9px 12px;
-  background: white;
-  color: #111;
+  border-radius: 8px;
+  padding: 8px 11px;
+  background: #e8eeec;
+  color: #15201e;
   font-weight: 650;
+  font-size: 13px;
+  touch-action: manipulation;
+}
+
+.track-row {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
 }
 
 #track-status {
-  margin-top: 10px;
-  font-size: 13px;
+  overflow: hidden;
   color: #aeb8c2;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .track-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 5px;
 }
 
 .track-actions button {
-  margin-top: 8px;
-  padding: 10px 6px;
+  min-height: 34px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, .12);
+  color: white;
+  font-size: 11px;
 }
 
 button:disabled {
-  opacity: .5;
+  opacity: .4;
+}
+
+.map-actions {
+  position: fixed;
+  z-index: 10;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+  gap: 8px;
+}
+
+.primary-action {
+  background: #24d6a2;
+  color: #10211d;
+}
+
+#toggle-waypoints {
+  background: #152327;
+  color: white;
+}
+
+#waypoint-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  margin-left: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .15);
+  font-size: 11px;
+}
+
+.locate-action {
+  padding: 0;
+  background: #152327;
+  color: white;
+  font-size: 22px;
+}
+
+.waypoint-sheet {
+  position: fixed;
+  z-index: 12;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: min(52vh, 430px);
+  padding: 16px 16px calc(84px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border-radius: 14px 14px 0 0;
+  background: #172126;
+  color: white;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, .35);
+}
+
+.waypoint-sheet[hidden] {
+  display: none;
+}
+
+.sheet-heading h2,
+.app-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.icon-button {
+  width: 40px;
+  padding: 0;
+  background: rgba(255, 255, 255, .12);
+  color: white;
+  font-size: 22px;
+}
+
+#waypoint-empty {
+  color: #aeb8c2;
+  font-size: 13px;
+}
+
+#waypoint-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.waypoint-row {
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.waypoint-info {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.waypoint-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waypoint-info span {
+  color: #aeb8c2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.waypoint-marker {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50% 50% 50% 3px;
+  background: #ed725c;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  transform: rotate(-45deg);
+}
+
+.waypoint-marker span {
+  transform: rotate(45deg);
+}
+
+.waypoint-notice {
+  min-height: 0;
+  margin: 8px 0;
+  color: #aeb8c2;
+  font-size: 12px;
+}
+
+.waypoint-controls {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.waypoint-controls button {
+  min-width: 42px;
+  padding: 7px 9px;
+}
+
+.waypoint-controls .delete-waypoint {
+  background: #4c2928;
+  color: #ffd9d6;
+}
+
+.app-dialog {
+  width: min(420px, calc(100% - 32px));
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 12px;
+  background: #172126;
+  color: white;
+}
+
+.app-dialog::backdrop {
+  background: rgba(0, 0, 0, .58);
+  backdrop-filter: blur(3px);
+}
+
+.app-dialog p {
+  color: #aeb8c2;
+  font-size: 13px;
+}
+
+.app-dialog label {
+  display: block;
+  margin: 14px 0 6px;
+  color: #aeb8c2;
+  font-size: 12px;
+}
+
+.app-dialog input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid #607170;
+  border-radius: 7px;
+  background: #10181b;
+  color: white;
+  font: inherit;
+  font-size: 16px;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.dialog-actions button {
+  min-width: 96px;
+}
+
+.danger-action {
+  background: #a8403d;
+  color: white;
 }
 
 .boat {
@@ -93,4 +366,32 @@ button:disabled {
 
 .maplibregl-ctrl-attrib {
   font-size: 10px !important;
+}
+
+@media (max-width: 360px) {
+  .panel {
+    padding: 9px;
+  }
+
+  .track-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .track-actions {
+    width: 100%;
+  }
+
+  .map-actions {
+    right: 8px;
+    left: 8px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+    gap: 6px;
+  }
+
+  .map-actions button {
+    padding-right: 6px;
+    padding-left: 6px;
+    font-size: 11px;
+  }
 }

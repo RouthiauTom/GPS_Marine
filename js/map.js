@@ -11,6 +11,7 @@ export function initializeMap(containerId) {
 
   let boatMarker = null;
   let trackCoordinates = [];
+  const waypointMarkers = new Map();
 
   function trackFeatureCollection() {
     if (trackCoordinates.length < 2) {
@@ -68,6 +69,19 @@ export function initializeMap(containerId) {
     });
   }
 
+  function createWaypointMarker(waypoint, index) {
+    const element = document.createElement('div');
+    element.className = 'waypoint-marker';
+    const label = document.createElement('span');
+    label.textContent = String(index + 1);
+    element.append(label);
+    element.title = waypoint.name;
+
+    return new window.maplibregl.Marker({ element, anchor: 'bottom' })
+      .setLngLat([waypoint.longitude, waypoint.latitude])
+      .addTo(map);
+  }
+
   return {
     updateBoatPosition(position, course = null) {
       const coordinates = [position.longitude, position.latitude];
@@ -85,6 +99,37 @@ export function initializeMap(containerId) {
     updateTrack(track) {
       trackCoordinates = track.points.map(point => [point.longitude, point.latitude]);
       renderTrack();
+    },
+
+    updateWaypoints(waypoints) {
+      const waypointIds = new Set(waypoints.map(waypoint => waypoint.id));
+
+      for (const [id, marker] of waypointMarkers) {
+        if (!waypointIds.has(id)) {
+          marker.remove();
+          waypointMarkers.delete(id);
+        }
+      }
+
+      waypoints.forEach((waypoint, index) => {
+        let marker = waypointMarkers.get(waypoint.id);
+        if (!marker) {
+          marker = createWaypointMarker(waypoint, index);
+          waypointMarkers.set(waypoint.id, marker);
+        }
+
+        marker.getElement().querySelector('span').textContent = String(index + 1);
+        marker.getElement().title = waypoint.name;
+        marker.setLngLat([waypoint.longitude, waypoint.latitude]);
+      });
+    },
+
+    centerOnWaypoint(waypoint) {
+      map.flyTo({
+        center: [waypoint.longitude, waypoint.latitude],
+        zoom: Math.max(map.getZoom(), 15),
+        essential: true
+      });
     },
 
     centerOnBoat(zoom = Math.max(map.getZoom(), 15)) {
