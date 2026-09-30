@@ -1,7 +1,8 @@
 const DATABASE_NAME = 'marine-gps';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 const TRACK_STORE = 'tracks';
 const WAYPOINT_STORE = 'waypoints';
+const ROUTE_STORE = 'routes';
 
 let databasePromise;
 
@@ -21,6 +22,9 @@ function openDatabase() {
         }
         if (!database.objectStoreNames.contains(WAYPOINT_STORE)) {
           database.createObjectStore(WAYPOINT_STORE, { keyPath: 'id' });
+        }
+        if (!database.objectStoreNames.contains(ROUTE_STORE)) {
+          database.createObjectStore(ROUTE_STORE, { keyPath: 'id' });
         }
       };
 
@@ -102,6 +106,43 @@ export async function deleteWaypoint(waypointId) {
   const database = await openDatabase();
   const transaction = database.transaction(WAYPOINT_STORE, 'readwrite');
   transaction.objectStore(WAYPOINT_STORE).delete(waypointId);
+
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function saveRoute(route) {
+  const database = await openDatabase();
+  const transaction = database.transaction(ROUTE_STORE, 'readwrite');
+  transaction.objectStore(ROUTE_STORE).put(route);
+
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function loadRoutes() {
+  const database = await openDatabase();
+  const transaction = database.transaction(ROUTE_STORE, 'readonly');
+  const request = transaction.objectStore(ROUTE_STORE).getAll();
+
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => {
+      resolve(request.result.sort((first, second) => first.createdAt - second.createdAt));
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function deleteRoute(routeId) {
+  const database = await openDatabase();
+  const transaction = database.transaction(ROUTE_STORE, 'readwrite');
+  transaction.objectStore(ROUTE_STORE).delete(routeId);
 
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();

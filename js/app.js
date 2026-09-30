@@ -11,10 +11,13 @@ import {
 } from './track.js';
 import {
   deleteTrack,
+  deleteRoute,
   deleteWaypoint,
   loadLatestTrack,
+  loadRoutes,
   loadWaypoints,
   saveTrack,
+  saveRoute,
   saveWaypoint
 } from './storage.js';
 import {
@@ -23,6 +26,18 @@ import {
   removeWaypoint,
   setWaypoints
 } from './waypoint.js';
+import {
+  addRoutePoint,
+  cancelActiveRoute,
+  getActiveRoute,
+  getRoutes,
+  removeRoute,
+  saveActiveRoute,
+  setRoutes,
+  startRoute,
+  toggleRouteVisibility,
+  undoRoutePoint
+} from './route.js';
 
 const getElement = id => document.getElementById(id);
 const map = initializeMap('map');
@@ -34,6 +49,9 @@ let waypointStorageAvailable = true;
 let waypointStorageInitialized = false;
 let latestPosition = null;
 let waypointPendingDeletion = null;
+let routeStorageAvailable = true;
+let routeStorageInitialized = false;
+let routePendingDeletion = null;
 
 function setTrackStatus(message) {
   getElement('track-status').textContent = message;
@@ -108,6 +126,116 @@ function renderWaypoints() {
 function closeWaypointSheet() {
   getElement('waypoint-sheet').hidden = true;
   getElement('toggle-waypoints').setAttribute('aria-expanded', 'false');
+}
+
+function closeRouteSheet() {
+  getElement('route-sheet').hidden = true;
+  getElement('toggle-routes').setAttribute('aria-expanded', 'false');
+}
+
+function updateRouteEditor() {
+  const route = getActiveRoute();
+  if (!route) return;
+
+  const pointCount = route.points.length;
+  getElement('route-editor-status').textContent =
+    `Touchez la carte pour ajouter les points · ${pointCount} point${pointCount === 1 ? '' : 's'}`;
+  getElement('undo-route-point').disabled = pointCount === 0;
+  getElement('save-route').disabled = pointCount < 2;
+}
+
+function updateRouteControls() {
+  getElement('start-route').disabled = !routeStorageInitialized || Boolean(getActiveRoute());
+}
+
+function renderRoutes() {
+  const routes = getRoutes();
+  const list = getElement('route-list');
+  list.replaceChildren();
+  getElement('route-count').textContent = String(routes.length);
+  getElement('route-empty').hidden = routes.length > 0;
+  map.updateRoutes(routes, getActiveRoute());
+
+  routes.forEach(route => {
+    const row = document.createElement('li');
+    row.className = 'waypoint-row';
+
+    const info = document.createElement('div');
+    info.className = 'waypoint-info';
+    const titleLine = document.createElement('div');
+    titleLine.className = 'route-title';
+    const color = document.createElement('span');
+    color.className = 'route-color';
+    color.style.backgroundColor = route.color;
+    color.setAttribute('aria-hidden', 'true');
+    const name = document.createElement('strong');
+    name.textContent = route.name;
+    titleLine.append(color, name);
+    const pointCount = document.createElement('span');
+    pointCount.textContent = `${route.points.length} points`;
+    info.append(titleLine, pointCount);
+
+    const controls = document.createElement('div');
+    controls.className = 'waypoint-controls';
+    const centerButton = document.createElement('button');
+    centerButton.type = 'button';
+    centerButton.textContent = route.visible ? 'Masquer' : 'Afficher';
+    centerButton.setAttribute('aria-pressed', String(route.visible));
+    centerButton.addEventListener('click', async () => {
+      const updatedRoute = toggleRouteVisibility(route.id);
+      if (!updatedRoute) return;
+
+      renderRoutes();
+      if (updatedRoute.visible) {
+        map.centerOnRoute(updatedRoute);
+        closeRouteSheet();
+      }
+
+      if (routeStorageAvailable) {
+        try {
+          await saveRoute(updatedRoute);
+        } catch {
+          routeStorageAvailable = false;
+          getElement('route-notice').textContent =
+            'Visibilité modifiée en session ; sauvegarde locale indisponible';
+        }
+      }
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'delete-waypoint';
+    deleteButton.textContent = 'Supprimer';
+    deleteButton.addEventListener('click', () => {
+      routePendingDeletion = route.id;
+      getElement('delete-route-name').textContent = route.name;
+      getElement('delete-route-dialog').showModal();
+    });
+
+    controls.append(centerButton, deleteButton);
+    row.append(info, controls);
+    list.append(row);
+  });
+}
+
+function leaveRouteCreationMode() {
+  map.setRouteCreationMode(false);
+  getElement('route-editor').hidden = true;
+  getElement('map-actions').hidden = false;
+  updateRouteControls();
+}
+
+function beginRouteCreation() {
+  if (!routeStorageInitialized || getActiveRoute()) return;
+
+  closeWaypointSheet();
+  closeRouteSheet();
+  startRoute(`Route ${getRoutes().length + 1}`);
+  map.setRouteCreationMode(true);
+  getElement('map-actions').hidden = true;
+  getElement('route-editor').hidden = false;
+  updateRouteEditor();
+  renderRoutes();
 }
 
 function updateInterface(position) {
@@ -262,6 +390,100 @@ getElement('toggle-waypoints').addEventListener('click', event => {
 
 getElement('close-waypoints').addEventListener('click', closeWaypointSheet);
 
+map.onMapClick(position => {
+  if (!getActiveRoute()) return;
+
+  addRoutePoint(position);
+  updateRouteEditor();
+  renderRoutes();
+});
+
+getElement('start-route').addEventListener('click', beginRouteCreation);
+
+getElement('undo-route-point').addEventListener('click', () => {
+  if (!getActiveRoute()) return;
+  undoRoutePoint();
+  updateRouteEditor();
+  renderRoutes();
+});
+
+getElement('cancel-route').addEventListener('click', () => {
+  cancelActiveRoute();
+  renderRoutes();
+  leaveRouteCreationMode();
+});
+
+getElement('save-route').addEventListener('click', () => {
+  const route = getActiveRoute();
+  if (!route || route.points.length < 2) return;
+
+  getElement('route-name').value = route.name;
+  getElement('route-name-dialog').showModal();
+  getElement('route-name').select();
+});
+
+getElement('cancel-route-save').addEventListener('click', () => {
+  getElement('route-name-dialog').close();
+});
+
+getElement('route-name-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const routeName = getElement('route-name').value.trim();
+  if (!routeName) return;
+
+  const route = saveActiveRoute(routeName);
+  if (!route) return;
+
+  const saveButton = event.currentTarget.querySelector('[type="submit"]');
+  saveButton.disabled = true;
+  renderRoutes();
+  leaveRouteCreationMode();
+
+  if (routeStorageAvailable) {
+    try {
+      await saveRoute(route);
+      getElement('route-notice').textContent = 'Route enregistrée';
+    } catch {
+      routeStorageAvailable = false;
+      getElement('route-notice').textContent =
+        'Sauvegarde locale indisponible ; route gardée en session';
+    }
+  }
+
+  getElement('route-name-dialog').close();
+  getElement('route-name-form').reset();
+  saveButton.disabled = false;
+});
+
+getElement('toggle-routes').addEventListener('click', event => {
+  closeWaypointSheet();
+  const sheet = getElement('route-sheet');
+  sheet.hidden = !sheet.hidden;
+  event.currentTarget.setAttribute('aria-expanded', String(!sheet.hidden));
+});
+
+getElement('close-routes').addEventListener('click', closeRouteSheet);
+
+getElement('delete-route-dialog').addEventListener('close', async event => {
+  if (event.currentTarget.returnValue !== 'delete' || !routePendingDeletion) return;
+
+  const routeId = routePendingDeletion;
+  routePendingDeletion = null;
+  removeRoute(routeId);
+  renderRoutes();
+
+  if (routeStorageAvailable) {
+    try {
+      await deleteRoute(routeId);
+      getElement('route-notice').textContent = 'Route supprimée';
+    } catch {
+      routeStorageAvailable = false;
+      getElement('route-notice').textContent =
+        'Route supprimée de la session ; suppression locale impossible';
+    }
+  }
+});
+
 async function initializeTrack() {
   try {
     const savedTrack = await loadLatestTrack();
@@ -293,8 +515,24 @@ async function initializeWaypoints() {
   updateWaypointControls();
 }
 
+async function initializeRoutes() {
+  try {
+    setRoutes(await loadRoutes());
+  } catch {
+    routeStorageAvailable = false;
+    getElement('route-notice').textContent =
+      'Stockage local indisponible ; routes gardées en session';
+  }
+
+  renderRoutes();
+  routeStorageInitialized = true;
+  updateRouteControls();
+}
+
 updateTrackControls();
 updateWaypointControls();
+updateRouteControls();
 initializeTrack();
 initializeWaypoints();
+initializeRoutes();
 startWatching(updateInterface, showGpsError);

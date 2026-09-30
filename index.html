@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V0.6</title>
+  <title>Marine GPS V0.7</title>
 
   <link
     href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
@@ -18,7 +18,7 @@
 
   <header class="panel">
     <div class="panel-heading">
-      <div class="title">Marine GPS <span>V0.6</span></div>
+      <div class="title">Marine GPS <span>V0.7</span></div>
       <div id="status" role="status">GPS : attente d'autorisation…</div>
     </div>
 
@@ -52,11 +52,22 @@
     </div>
   </header>
 
-  <nav class="map-actions" aria-label="Actions carte">
-    <button id="add-waypoint" class="primary-action" disabled>＋ Ajouter un waypoint</button>
-    <button id="toggle-waypoints" aria-expanded="false">Waypoints <span id="waypoint-count">0</span></button>
+  <nav id="map-actions" class="map-actions" aria-label="Actions carte">
+    <button id="add-waypoint" class="primary-action" aria-label="Ajouter un waypoint" disabled>＋ WP</button>
+    <button id="start-route">Créer route</button>
+    <button id="toggle-waypoints" aria-expanded="false">WP <span id="waypoint-count">0</span></button>
+    <button id="toggle-routes" aria-expanded="false">Routes <span id="route-count">0</span></button>
     <button id="locate" class="locate-action" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">◎</button>
   </nav>
+
+  <section id="route-editor" class="route-editor" aria-label="Création de route" hidden>
+    <p id="route-editor-status" aria-live="polite">Touchez la carte pour ajouter les points</p>
+    <div class="route-editor-actions">
+      <button id="undo-route-point" disabled>Annuler le dernier</button>
+      <button id="cancel-route">Quitter</button>
+      <button id="save-route" class="primary-action" disabled>Enregistrer</button>
+    </div>
+  </section>
 
   <section id="waypoint-sheet" class="waypoint-sheet" aria-labelledby="waypoint-heading" hidden>
     <div class="sheet-heading">
@@ -66,6 +77,16 @@
     <p id="waypoint-empty">Aucun waypoint enregistré.</p>
     <p id="waypoint-notice" class="waypoint-notice" aria-live="polite"></p>
     <ul id="waypoint-list"></ul>
+  </section>
+
+  <section id="route-sheet" class="waypoint-sheet" aria-labelledby="route-heading" hidden>
+    <div class="sheet-heading">
+      <h2 id="route-heading">Routes</h2>
+      <button id="close-routes" class="icon-button" aria-label="Fermer les routes">×</button>
+    </div>
+    <p id="route-empty">Aucune route enregistrée.</p>
+    <p id="route-notice" class="waypoint-notice" aria-live="polite"></p>
+    <ul id="route-list"></ul>
   </section>
 
   <dialog id="waypoint-dialog" class="app-dialog">
@@ -85,6 +106,29 @@
     <form method="dialog">
       <h2>Supprimer ce waypoint ?</h2>
       <p id="delete-waypoint-name"></p>
+      <div class="dialog-actions">
+        <button value="cancel">Annuler</button>
+        <button value="delete" class="danger-action">Supprimer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="route-name-dialog" class="app-dialog">
+    <form id="route-name-form">
+      <h2>Enregistrer la route</h2>
+      <label for="route-name">Nom</label>
+      <input id="route-name" name="name" maxlength="32" required autocomplete="off">
+      <div class="dialog-actions">
+        <button type="button" id="cancel-route-save">Annuler</button>
+        <button type="submit" class="primary-action">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="delete-route-dialog" class="app-dialog">
+    <form method="dialog">
+      <h2>Supprimer cette route ?</h2>
+      <p id="delete-route-name"></p>
       <div class="dialog-actions">
         <button value="cancel">Annuler</button>
         <button value="delete" class="danger-action">Supprimer</button>

@@ -160,8 +160,12 @@ button:disabled {
   bottom: max(12px, env(safe-area-inset-bottom));
   left: 12px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, .65fr) minmax(0, .9fr) 44px;
   gap: 8px;
+}
+
+.map-actions[hidden] {
+  display: none;
 }
 
 .primary-action {
@@ -170,6 +174,12 @@ button:disabled {
 }
 
 #toggle-waypoints {
+  background: #152327;
+  color: white;
+}
+
+#toggle-routes,
+#start-route {
   background: #152327;
   color: white;
 }
@@ -190,6 +200,79 @@ button:disabled {
   background: #152327;
   color: white;
   font-size: 22px;
+}
+
+.route-editor {
+  position: fixed;
+  z-index: 11;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 10px;
+  background: rgba(18, 25, 29, .96);
+  color: white;
+  box-shadow: 0 3px 18px rgba(0, 0, 0, .3);
+}
+
+.route-editor[hidden] {
+  display: none;
+}
+
+.route-editor p {
+  margin: 0 0 8px;
+  color: #aeb8c2;
+  font-size: 12px;
+}
+
+.route-editor-actions {
+  display: grid;
+  grid-template-columns: 1fr .7fr 1fr;
+  gap: 8px;
+}
+
+.route-editor-actions button {
+  min-height: 42px;
+  padding: 7px;
+  font-size: 12px;
+}
+
+.route-point-marker {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: #188b70;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.route-point-marker.is-draft {
+  border-style: dashed;
+}
+
+.route-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.route-color {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border: 1px solid rgba(255, 255, 255, .8);
+  border-radius: 50%;
+}
+
+#map .maplibregl-canvas.route-creation {
+  cursor: crosshair;
 }
 
 .waypoint-sheet {
@@ -267,17 +350,12 @@ button:disabled {
   height: 30px;
   place-items: center;
   border: 2px solid white;
-  border-radius: 50% 50% 50% 3px;
+  border-radius: 50%;
   background: #ed725c;
   box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
   color: white;
   font-size: 12px;
   font-weight: 700;
-  transform: rotate(-45deg);
-}
-
-.waypoint-marker span {
-  transform: rotate(45deg);
 }
 
 .waypoint-notice {
@@ -385,7 +463,7 @@ button:disabled {
   .map-actions {
     right: 8px;
     left: 8px;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, .65fr) minmax(0, .9fr) 40px;
     gap: 6px;
   }
 
@@ -393,5 +471,10 @@ button:disabled {
     padding-right: 6px;
     padding-left: 6px;
     font-size: 11px;
+  }
+
+  #start-route,
+  #toggle-routes {
+    font-size: 10px;
   }
 }
