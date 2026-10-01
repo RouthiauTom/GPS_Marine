@@ -43,40 +43,60 @@
       <span>Lon <strong id="lon">—</strong></span>
     </div>
 
-    <div id="navigation-panel" class="navigation-panel">
-      <div class="navigation-header">
-        <span class="label">Route</span>
-        <strong id="navigation-route-name">Aucune route</strong>
-      </div>
-      <div class="instruments navigation-instruments" aria-label="Navigation active">
-        <div class="instrument">
-          <span class="label">XTE</span>
-          <strong id="xte">—</strong>
-        </div>
-        <div class="instrument">
-          <span class="label">DTW</span>
-          <strong id="dtw">—</strong>
-        </div>
-        <div class="instrument">
-          <span class="label">BRG</span>
-          <strong id="brg">—</strong>
-        </div>
-        <div class="instrument">
-          <span class="label">ETA</span>
-          <strong id="eta">—</strong>
-        </div>
-      </div>
-    </div>
-
     <div class="track-row">
       <span id="track-status" aria-live="polite">Trace arrêtée</span>
       <div class="track-actions">
-        <button id="track-start" disabled>Démarrer</button>
-        <button id="track-stop" disabled>Arrêter</button>
-        <button id="track-clear" disabled>Effacer</button>
+        <button id="track-record" class="track-icon-button record-button" type="button" aria-label="Démarrer l'enregistrement" title="Démarrer l'enregistrement" disabled>
+          <span class="record-dot" aria-hidden="true"></span>
+          <svg class="track-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+          <svg class="track-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z" /></svg>
+        </button>
+        <button id="track-save" class="track-icon-button" type="button" aria-label="Enregistrer la trace comme route" title="Enregistrer la trace comme route" hidden disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
+        </button>
+        <button id="track-clear" class="track-icon-button danger-action" type="button" aria-label="Supprimer la trace" title="Supprimer la trace" hidden disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
+        </button>
       </div>
     </div>
   </header>
+
+  <div id="bottom-sheet" class="bottom-sheet collapsed" role="region" tabindex="0" aria-expanded="false" aria-label="Panneau de navigation et actions. Faites glisser pour ouvrir ou fermer.">
+    <div class="bottom-sheet-handle" aria-hidden="true"></div>
+
+    <div class="bottom-sheet-header">
+      <div>
+        <span class="label">Route</span>
+        <strong id="navigation-route-name">Aucune route</strong>
+      </div>
+    </div>
+
+    <div class="instruments navigation-instruments" aria-label="Navigation active">
+      <div class="instrument">
+        <span class="label">XTE</span>
+        <strong id="xte">—</strong>
+      </div>
+      <div class="instrument">
+        <span class="label">DTW</span>
+        <strong id="dtw">—</strong>
+      </div>
+      <div class="instrument">
+        <span class="label">BRG</span>
+        <strong id="brg">—</strong>
+      </div>
+      <div class="instrument">
+        <span class="label">ETA</span>
+        <strong id="eta">—</strong>
+      </div>
+    </div>
+
+    <div class="bottom-sheet-actions">
+      <button id="menu-add-waypoint" class="primary-action" type="button">＋ Ajouter un waypoint</button>
+      <button id="menu-start-route" type="button">Créer une route</button>
+      <button id="menu-toggle-waypoints" type="button">Waypoints <span id="menu-waypoint-count">0</span></button>
+      <button id="menu-toggle-routes" type="button">Routes <span id="menu-route-count">0</span></button>
+    </div>
+  </div>
 
   <nav id="map-actions" class="map-actions" aria-label="Actions carte">
     <button id="add-waypoint" class="primary-action" aria-label="Ajouter un waypoint" disabled>＋ WP</button>

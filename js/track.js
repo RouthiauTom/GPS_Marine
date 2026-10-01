@@ -4,6 +4,12 @@ let tracking = false;
 export function startTracking() {
   if (tracking) return currentTrack;
 
+  if (currentTrack) {
+    currentTrack.stoppedAt = null;
+    tracking = true;
+    return currentTrack;
+  }
+
   currentTrack = {
     id: createTrackId(),
     startedAt: Date.now(),

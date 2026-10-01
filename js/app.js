@@ -48,6 +48,8 @@ const map = initializeMap('map');
 let firstFix = true;
 const MIN_COG_SPEED = 0.5;
 let activeNavigationRouteId = null;
+let bottomSheetOpen = false;
+let sheetTouchStartY = null;
 let trackStorageAvailable = true;
 let trackStorageInitialized = false;
 let waypointStorageAvailable = true;
@@ -64,9 +66,25 @@ function setTrackStatus(message) {
 }
 
 function updateTrackControls() {
-  getElement('track-start').disabled = !trackStorageInitialized || isTracking();
-  getElement('track-stop').disabled = !isTracking();
-  getElement('track-clear').disabled = !getCurrentTrack();
+  const track = getCurrentTrack();
+  const recording = isTracking();
+  const recordButton = getElement('track-record');
+  const saveButton = getElement('track-save');
+  const clearButton = getElement('track-clear');
+
+  recordButton.disabled = !trackStorageInitialized;
+  recordButton.classList.toggle('is-recording', recording);
+  recordButton.classList.toggle('is-paused', Boolean(track) && !recording);
+  recordButton.setAttribute(
+    'aria-label',
+    recording ? 'Mettre en pause l’enregistrement' : track ? 'Reprendre l’enregistrement' : 'Démarrer l’enregistrement'
+  );
+  recordButton.title = recordButton.getAttribute('aria-label');
+  saveButton.hidden = !track || recording;
+  saveButton.disabled = !track || track.points.length < 2 || !routeStorageInitialized ||
+    !routeStorageAvailable || Boolean(getActiveRoute());
+  clearButton.hidden = !track || recording;
+  clearButton.disabled = !track;
 }
 
 function persistTrack(track) {
@@ -87,6 +105,7 @@ function renderWaypoints() {
   const list = getElement('waypoint-list');
   list.replaceChildren();
   getElement('waypoint-count').textContent = String(waypoints.length);
+  getElement('menu-waypoint-count').textContent = String(waypoints.length);
   getElement('waypoint-empty').hidden = waypoints.length > 0;
   map.updateWaypoints(waypoints);
 
@@ -154,6 +173,14 @@ function updateRouteControls() {
   getElement('start-route').disabled = !routeStorageInitialized || Boolean(getActiveRoute());
 }
 
+function setBottomSheetState(open) {
+  bottomSheetOpen = open;
+  const bottomSheet = getElement('bottom-sheet');
+  bottomSheet.classList.toggle('expanded', open);
+  bottomSheet.classList.toggle('collapsed', !open);
+  bottomSheet.setAttribute('aria-expanded', String(open));
+}
+
 function renderNavigation() {
   const route = activeNavigationRouteId
     ? getRoutes().find(item => item.id === activeNavigationRouteId)
@@ -186,6 +213,7 @@ function renderRoutes() {
   const list = getElement('route-list');
   list.replaceChildren();
   getElement('route-count').textContent = String(routes.length);
+  getElement('menu-route-count').textContent = String(routes.length);
   getElement('route-empty').hidden = routes.length > 0;
   map.updateRoutes(routes, getActiveRoute());
 
@@ -525,22 +553,67 @@ function showGpsError(error) {
   getElement('status').textContent = messages[error.code] || 'GPS : erreur inconnue.';
 }
 
-getElement('locate').addEventListener('click', () => map.centerOnBoat());
+const bottomSheet = getElement('bottom-sheet');
 
-getElement('track-start').addEventListener('click', () => {
-  const track = startTracking();
-  map.updateTrack(track);
-  persistTrack(track);
-  setTrackStatus('Enregistrement en cours · 0 points');
-  updateTrackControls();
+bottomSheet.addEventListener('pointerdown', event => {
+  if (event.target.closest('button')) return;
+  sheetTouchStartY = event.clientY;
+  bottomSheet.setPointerCapture(event.pointerId);
 });
 
-getElement('track-stop').addEventListener('click', () => {
-  const track = stopTracking();
+bottomSheet.addEventListener('pointerup', event => {
+  if (sheetTouchStartY === null) return;
+
+  const delta = event.clientY - sheetTouchStartY;
+  if (delta < -35) setBottomSheetState(true);
+  if (delta > 35) setBottomSheetState(false);
+  sheetTouchStartY = null;
+});
+
+bottomSheet.addEventListener('pointercancel', () => {
+  sheetTouchStartY = null;
+});
+
+bottomSheet.addEventListener('keydown', event => {
+  if (event.key === 'ArrowUp') setBottomSheetState(true);
+  if (event.key === 'ArrowDown' || event.key === 'Escape') setBottomSheetState(false);
+});
+
+function closeBottomSheet() {
+  setBottomSheetState(false);
+}
+
+getElement('menu-add-waypoint').addEventListener('click', () => {
+  closeBottomSheet();
+  getElement('add-waypoint').click();
+});
+
+getElement('menu-toggle-waypoints').addEventListener('click', () => {
+  closeBottomSheet();
+  getElement('toggle-waypoints').click();
+});
+
+getElement('menu-start-route').addEventListener('click', () => {
+  closeBottomSheet();
+  getElement('start-route').click();
+});
+
+getElement('menu-toggle-routes').addEventListener('click', () => {
+  closeBottomSheet();
+  getElement('toggle-routes').click();
+});
+
+getElement('locate').addEventListener('click', () => map.centerOnBoat());
+
+getElement('track-record').addEventListener('click', () => {
+  const track = isTracking() ? stopTracking() : startTracking();
   if (!track) return;
 
+  map.updateTrack(track);
   persistTrack(track);
-  setTrackStatus(`Trace arrêtée · ${track.points.length} points`);
+  setTrackStatus(isTracking()
+    ? `Enregistrement en cours · ${track.points.length} points`
+    : `Trace en pause · ${track.points.length} points`);
   updateTrackControls();
 });
 
@@ -561,6 +634,48 @@ getElement('track-clear').addEventListener('click', async () => {
   }
 
   if (trackStorageAvailable) setTrackStatus('Trace effacée');
+  updateTrackControls();
+});
+
+getElement('track-save').addEventListener('click', async event => {
+  const track = getCurrentTrack();
+  if (!track || isTracking() || track.points.length < 2 || getActiveRoute() || !routeStorageAvailable) return;
+
+  const routeName = `Trace du ${new Date(track.startedAt).toLocaleDateString('fr-FR')}`;
+  startRoute(routeName);
+  track.points.forEach(point => addRoutePoint(point));
+  const route = saveActiveRoute(routeName);
+  if (!route) {
+    cancelActiveRoute();
+    return;
+  }
+
+  event.currentTarget.disabled = true;
+  renderRoutes();
+  try {
+    await saveRoute(route);
+  } catch {
+    routeStorageAvailable = false;
+    removeRoute(route.id);
+    renderRoutes();
+    setTrackStatus('Route non sauvegardée ; trace conservée');
+    updateTrackControls();
+    return;
+  }
+
+  clearTrack();
+  map.updateTrack({ points: [] });
+  let status = `Trace enregistrée comme route : ${route.name}`;
+  if (trackStorageAvailable) {
+    try {
+      await deleteTrack(track.id);
+    } catch {
+      trackStorageAvailable = false;
+      status = 'Route enregistrée ; ancienne trace conservée dans le stockage local';
+    }
+  }
+
+  setTrackStatus(status);
   updateTrackControls();
 });
 
@@ -811,6 +926,7 @@ async function initializeRoutes() {
   renderRoutes();
   routeStorageInitialized = true;
   updateRouteControls();
+  updateTrackControls();
 }
 
 updateTrackControls();
