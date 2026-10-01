@@ -1,4 +1,5 @@
 import { startWatching } from './gps.js';
+import { computeRouteNavigation } from './navigation.mjs';
 import { initializeMap } from './map.js';
 import {
   addTrackPoint,
@@ -46,6 +47,7 @@ const getElement = id => document.getElementById(id);
 const map = initializeMap('map');
 let firstFix = true;
 const MIN_COG_SPEED = 0.5;
+let activeNavigationRouteId = null;
 let trackStorageAvailable = true;
 let trackStorageInitialized = false;
 let waypointStorageAvailable = true;
@@ -152,6 +154,33 @@ function updateRouteControls() {
   getElement('start-route').disabled = !routeStorageInitialized || Boolean(getActiveRoute());
 }
 
+function renderNavigation() {
+  const route = activeNavigationRouteId
+    ? getRoutes().find(item => item.id === activeNavigationRouteId)
+    : null;
+
+  const setValue = (id, value) => {
+    const element = getElement(id);
+    if (element) element.textContent = value;
+  };
+
+  if (!route || !latestPosition) {
+    setValue('navigation-route-name', 'Aucune route');
+    setValue('xte', '—');
+    setValue('dtw', '—');
+    setValue('brg', '—');
+    setValue('eta', '—');
+    return;
+  }
+
+  const metrics = computeRouteNavigation(route, latestPosition, Number.isFinite(latestPosition.speed) ? latestPosition.speed : 0);
+  setValue('navigation-route-name', route.name);
+  setValue('xte', metrics.xteMeters === null ? '—' : `${metrics.xteMeters >= 0 ? '+' : '-'}${Math.round(Math.abs(metrics.xteMeters))} m`);
+  setValue('dtw', metrics.distanceToWaypointMeters === null ? '—' : `${Math.round(metrics.distanceToWaypointMeters)} m`);
+  setValue('brg', metrics.bearingDegrees === null ? '—' : `${Math.round(metrics.bearingDegrees)}°`);
+  setValue('eta', metrics.etaText);
+}
+
 function renderRoutes() {
   const routes = getRoutes();
   const list = getElement('route-list');
@@ -162,7 +191,7 @@ function renderRoutes() {
 
   routes.forEach(route => {
     const row = document.createElement('li');
-    row.className = 'waypoint-row';
+    row.className = activeNavigationRouteId === route.id ? 'waypoint-row route-row-selected' : 'waypoint-row';
 
     const info = document.createElement('div');
     info.className = 'waypoint-info';
@@ -181,6 +210,17 @@ function renderRoutes() {
 
     const controls = document.createElement('div');
     controls.className = 'waypoint-controls';
+
+    const followButton = document.createElement('button');
+    followButton.type = 'button';
+    followButton.textContent = activeNavigationRouteId === route.id ? 'Stop' : 'Suivre';
+    followButton.classList.toggle('primary-action', activeNavigationRouteId === route.id);
+    followButton.addEventListener('click', () => {
+      activeNavigationRouteId = activeNavigationRouteId === route.id ? null : route.id;
+      renderRoutes();
+      renderNavigation();
+    });
+
     const centerButton = document.createElement('button');
     centerButton.type = 'button';
     centerButton.textContent = route.visible ? 'Masquer' : 'Afficher';
@@ -216,10 +256,12 @@ function renderRoutes() {
       getElement('delete-route-dialog').showModal();
     });
 
-    controls.append(centerButton, deleteButton);
+    controls.append(followButton, centerButton, deleteButton);
     row.append(info, controls);
     list.append(row);
   });
+
+  renderNavigation();
 }
 
 function leaveRouteCreationMode() {
@@ -457,6 +499,7 @@ function updateInterface(position) {
 
   map.updateBoatPosition(position, hasReliableCourse ? position.course : null);
   getElement('status').textContent = 'GPS : position reçue';
+  renderNavigation();
 
   if (isTracking()) {
     const track = addTrackPoint(position);

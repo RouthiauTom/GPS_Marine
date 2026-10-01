@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V0.8</title>
+  <title>Marine GPS V0.9</title>
 
   <link
     href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
@@ -18,7 +18,7 @@
 
   <header class="panel">
     <div class="panel-heading">
-      <div class="title">Marine GPS <span>V0.8</span></div>
+      <div class="title">Marine GPS <span>V0.9</span></div>
       <div id="status" role="status">GPS : attente d'autorisation…</div>
       <button id="open-gpx" class="gpx-action" aria-label="Importer ou exporter GPX" title="Importer ou exporter GPX">GPX</button>
     </div>
@@ -41,6 +41,31 @@
     <div class="coordinates">
       <span>Lat <strong id="lat">—</strong></span>
       <span>Lon <strong id="lon">—</strong></span>
+    </div>
+
+    <div id="navigation-panel" class="navigation-panel">
+      <div class="navigation-header">
+        <span class="label">Route</span>
+        <strong id="navigation-route-name">Aucune route</strong>
+      </div>
+      <div class="instruments navigation-instruments" aria-label="Navigation active">
+        <div class="instrument">
+          <span class="label">XTE</span>
+          <strong id="xte">—</strong>
+        </div>
+        <div class="instrument">
+          <span class="label">DTW</span>
+          <strong id="dtw">—</strong>
+        </div>
+        <div class="instrument">
+          <span class="label">BRG</span>
+          <strong id="brg">—</strong>
+        </div>
+        <div class="instrument">
+          <span class="label">ETA</span>
+          <strong id="eta">—</strong>
+        </div>
+      </div>
     </div>
 
     <div class="track-row">

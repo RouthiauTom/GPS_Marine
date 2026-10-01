@@ -123,6 +123,34 @@ html, body {
   font-weight: 500;
 }
 
+.navigation-panel {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.navigation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #aeb8c2;
+  font-size: 11px;
+}
+
+.navigation-header strong {
+  overflow: hidden;
+  color: white;
+  font-size: 12px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navigation-instruments {
+  margin-top: 8px;
+}
+
 button {
   min-height: 40px;
   border: 0;
@@ -338,6 +366,13 @@ button:disabled {
 .waypoint-row {
   padding: 10px 0;
   border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.route-row-selected {
+  border-radius: 8px;
+  background: rgba(36, 214, 162, .08);
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .waypoint-info {
