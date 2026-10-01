@@ -150,7 +150,7 @@ html, body {
 }
 
 .bottom-sheet.expanded {
-  height: 210px;
+  height: 270px;
 }
 
 .bottom-sheet-handle {
@@ -356,7 +356,7 @@ button:disabled {
 
 .route-editor {
   position: fixed;
-  z-index: 11;
+  z-index: 20;
   right: 12px;
   bottom: max(12px, env(safe-area-inset-bottom));
   left: 12px;
@@ -429,7 +429,7 @@ button:disabled {
 
 .waypoint-sheet {
   position: fixed;
-  z-index: 12;
+  z-index: 20;
   right: 0;
   bottom: 0;
   left: 0;
