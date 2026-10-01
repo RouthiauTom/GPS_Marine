@@ -133,8 +133,8 @@ export function initializeMap(containerId) {
     const element = document.createElement('div');
     element.className = isDraft ? 'route-point-marker is-draft' : 'route-point-marker';
     element.style.backgroundColor = color;
-    element.textContent = String(number);
-    element.title = `${name} · point ${number}`;
+    element.textContent = isDraft ? String(number) : '';
+    element.title = isDraft ? `${name} · point ${number}` : name;
 
     return new window.maplibregl.Marker({ element, anchor: 'center' })
       .setLngLat([point.longitude, point.latitude])
@@ -188,8 +188,10 @@ export function initializeMap(containerId) {
       }
 
       marker.setLngLat([item.point.longitude, item.point.latitude]);
-      marker.getElement().textContent = String(item.number);
-      marker.getElement().title = `${item.name} · point ${item.number}`;
+      marker.getElement().textContent = item.isDraft ? String(item.number) : '';
+      marker.getElement().title = item.isDraft
+        ? `${item.name} · point ${item.number}`
+        : item.name;
       marker.getElement().classList.toggle('is-draft', item.isDraft);
       marker.getElement().style.backgroundColor = item.color;
     });

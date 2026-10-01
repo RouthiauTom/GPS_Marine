@@ -71,6 +71,7 @@ function updateTrackControls() {
   const recordButton = getElement('track-record');
   const saveButton = getElement('track-save');
   const clearButton = getElement('track-clear');
+  const finalizeActions = getElement('track-finalize-actions');
 
   recordButton.disabled = !trackStorageInitialized;
   recordButton.classList.toggle('is-recording', recording);
@@ -80,6 +81,9 @@ function updateTrackControls() {
     recording ? 'Mettre en pause l’enregistrement' : track ? 'Reprendre l’enregistrement' : 'Démarrer l’enregistrement'
   );
   recordButton.title = recordButton.getAttribute('aria-label');
+  finalizeActions.hidden = !track || recording;
+  getElement('bottom-sheet').classList.toggle('has-paused-track', Boolean(track) && !recording);
+  document.body.classList.toggle('sheet-track-paused', Boolean(track) && !recording);
   saveButton.hidden = !track || recording;
   saveButton.disabled = !track || track.points.length < 2 || !routeStorageInitialized ||
     !routeStorageAvailable || Boolean(getActiveRoute());
@@ -178,6 +182,7 @@ function setBottomSheetState(open) {
   const bottomSheet = getElement('bottom-sheet');
   bottomSheet.classList.toggle('expanded', open);
   bottomSheet.classList.toggle('collapsed', !open);
+  document.body.classList.toggle('sheet-expanded', open);
   bottomSheet.setAttribute('aria-expanded', String(open));
 }
 
@@ -185,6 +190,10 @@ function renderNavigation() {
   const route = activeNavigationRouteId
     ? getRoutes().find(item => item.id === activeNavigationRouteId)
     : null;
+  getElement('bottom-sheet').classList.toggle('following-route', Boolean(route));
+  document.body.classList.toggle('sheet-following-route', Boolean(route));
+  getElement('navigation-route-name').hidden = !route;
+  getElement('navigation-instruments').hidden = !route;
 
   const setValue = (id, value) => {
     const element = getElement(id);
@@ -192,7 +201,7 @@ function renderNavigation() {
   };
 
   if (!route || !latestPosition) {
-    setValue('navigation-route-name', 'Aucune route');
+    setValue('navigation-route-name', '');
     setValue('xte', '—');
     setValue('dtw', '—');
     setValue('brg', '—');
@@ -511,13 +520,11 @@ function beginRouteCreation() {
 function updateInterface(position) {
   latestPosition = position;
   updateWaypointControls();
-  getElement('lat').textContent = position.latitude.toFixed(6) + '°';
-  getElement('lon').textContent = position.longitude.toFixed(6) + '°';
   getElement('accuracy').textContent = position.accuracy
     ? Math.round(position.accuracy) + ' m'
     : '—';
-  getElement('speed').textContent = Number.isFinite(position.speed)
-    ? (position.speed * 1.943844).toFixed(1) + ' nd'
+  getElement('speed-bottom').textContent = Number.isFinite(position.speed)
+    ? (position.speed * 1.943844).toFixed(1)
     : '—';
   const hasReliableCourse =
     Number.isFinite(position.course) && position.speed >= MIN_COG_SPEED;
