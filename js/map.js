@@ -1,3 +1,7 @@
+import { getWaypointType, WAYPOINT_TYPES } from './waypoint.js?v=1.0.0';
+
+const MIN_MARKER_ZOOM = 12;
+
 export function initializeMap(containerId) {
   const map = new window.maplibregl.Map({
     container: containerId,
@@ -17,6 +21,15 @@ export function initializeMap(containerId) {
   let routes = [];
   let activeRoute = null;
   let followingRouteId = null;
+
+  function updateMarkerZoomVisibility() {
+    const visible = map.getZoom() >= MIN_MARKER_ZOOM;
+    [...waypointMarkers.values(), ...routePointMarkers.values()].forEach(marker => {
+      marker.getElement().style.display = visible ? '' : 'none';
+    });
+  }
+
+  map.on('zoom', updateMarkerZoomVisibility);
 
   function trackFeatureCollection() {
     const segments = new Map();
@@ -199,6 +212,8 @@ export function initializeMap(containerId) {
       marker.getElement().classList.toggle('is-draft', item.isDraft);
       marker.getElement().style.backgroundColor = item.color;
     });
+
+    updateMarkerZoomVisibility();
   }
 
   function renderRoutesAndPoints() {
@@ -206,7 +221,23 @@ export function initializeMap(containerId) {
     renderRoutePoints();
   }
 
+  function addOpenSeaMapSeamarks() {
+    map.addSource('openseamap-seamarks', {
+      type: 'raster',
+      tiles: ['https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '&copy; <a href="https://www.openseamap.org/">OpenSeaMap</a> contributors · <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC BY-SA 2.0</a>'
+    });
+    map.addLayer({
+      id: 'openseamap-seamarks',
+      type: 'raster',
+      source: 'openseamap-seamarks',
+      paint: { 'raster-opacity': 1 }
+    });
+  }
+
   map.on('load', () => {
+    addOpenSeaMapSeamarks();
     renderTrack();
     renderRoutesAndPoints();
   });
@@ -223,17 +254,28 @@ export function initializeMap(containerId) {
     });
   }
 
-  function createWaypointMarker(waypoint, index) {
+  function createWaypointMarker(waypoint) {
+    const type = getWaypointType(waypoint.type);
     const element = document.createElement('div');
-    element.className = 'waypoint-marker';
+    element.className = `waypoint-marker waypoint-marker-${type.id}`;
     const label = document.createElement('span');
-    label.textContent = String(index + 1);
+    label.textContent = type.marker;
     element.append(label);
-    element.title = waypoint.name;
+    element.title = `${type.label} · ${waypoint.name}`;
 
     return new window.maplibregl.Marker({ element, anchor: 'bottom' })
       .setLngLat([waypoint.longitude, waypoint.latitude])
       .addTo(map);
+  }
+
+  function updateWaypointMarker(marker, waypoint) {
+    const type = getWaypointType(waypoint.type);
+    const element = marker.getElement();
+    WAYPOINT_TYPES.forEach(item => element.classList.remove(`waypoint-marker-${item.id}`));
+    element.classList.add(`waypoint-marker-${type.id}`);
+    element.querySelector('span').textContent = type.marker;
+    element.title = `${type.label} · ${waypoint.name}`;
+    marker.setLngLat([waypoint.longitude, waypoint.latitude]);
   }
 
   return {
@@ -266,17 +308,21 @@ export function initializeMap(containerId) {
         }
       }
 
-      visibleWaypoints.forEach((waypoint, index) => {
+      visibleWaypoints.forEach(waypoint => {
         let marker = waypointMarkers.get(waypoint.id);
         if (!marker) {
-          marker = createWaypointMarker(waypoint, index);
+          marker = createWaypointMarker(waypoint);
           waypointMarkers.set(waypoint.id, marker);
         }
 
-        marker.getElement().querySelector('span').textContent = String(index + 1);
-        marker.getElement().title = waypoint.name;
-        marker.setLngLat([waypoint.longitude, waypoint.latitude]);
+        updateWaypointMarker(marker, waypoint);
       });
+
+      updateMarkerZoomVisibility();
+    },
+
+    setWaypointPlacementMode(enabled) {
+      map.getCanvas().classList.toggle('waypoint-placement', enabled);
     },
 
     onMapClick(handler) {

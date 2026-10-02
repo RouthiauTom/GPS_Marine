@@ -1,6 +1,6 @@
 import { startWatching } from './gps.js';
 import { computeRouteNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js';
+import { initializeMap } from './map.js?v=1.0.1';
 import {
   addTrackPoint,
   clearTrack,
@@ -25,10 +25,12 @@ import {
 } from './storage.js';
 import {
   createWaypoint,
+  getWaypointType,
   getWaypoints,
   removeWaypoint,
-  setWaypoints
-} from './waypoint.js';
+  setWaypoints,
+  WAYPOINT_TYPES
+} from './waypoint.js?v=1.0.0';
 import {
   addRoutePoint,
   cancelActiveRoute,
@@ -54,6 +56,9 @@ let trackStorageAvailable = true;
 let trackStorageInitialized = false;
 let waypointStorageAvailable = true;
 let waypointStorageInitialized = false;
+let pendingWaypoint = null;
+let removeWaypointMapClickListener = null;
+let generatedWaypointName = '';
 let latestPosition = null;
 let waypointPendingDeletion = null;
 let routeStorageAvailable = true;
@@ -99,7 +104,7 @@ function persistTrack(track) {
 }
 
 function updateWaypointControls() {
-  getElement('add-waypoint').disabled = !waypointStorageInitialized || !latestPosition;
+  getElement('add-waypoint').disabled = !waypointStorageInitialized || Boolean(getActiveRoute());
 }
 
 function renderWaypoints() {
@@ -112,6 +117,7 @@ function renderWaypoints() {
   map.updateWaypoints(waypoints, Boolean(activeNavigationRouteId));
 
   waypoints.forEach((waypoint, index) => {
+    const type = getWaypointType(waypoint.type);
     const row = document.createElement('li');
     row.className = 'waypoint-row';
 
@@ -121,7 +127,7 @@ function renderWaypoints() {
     name.textContent = `${index + 1}. ${waypoint.name}`;
     const coordinates = document.createElement('span');
     coordinates.textContent =
-      `${waypoint.latitude.toFixed(5)}°, ${waypoint.longitude.toFixed(5)}°`;
+      `${type.label} · ${waypoint.latitude.toFixed(5)}°, ${waypoint.longitude.toFixed(5)}°`;
     info.append(name, coordinates);
 
     const controls = document.createElement('div');
@@ -153,6 +159,50 @@ function renderWaypoints() {
 function closeWaypointSheet() {
   getElement('waypoint-sheet').hidden = true;
   getElement('toggle-waypoints').setAttribute('aria-expanded', 'false');
+}
+
+function defaultWaypointName(type) {
+  const count = getWaypoints().filter(waypoint => waypoint.type === type.id).length + 1;
+  return `${type.label} ${count}`;
+}
+
+function stopWaypointPlacement() {
+  removeWaypointMapClickListener?.();
+  removeWaypointMapClickListener = null;
+  pendingWaypoint = null;
+  map.setWaypointPlacementMode(false);
+  getElement('waypoint-placement').hidden = true;
+}
+
+function beginWaypointPlacement(waypoint) {
+  pendingWaypoint = waypoint;
+  closeWaypointSheet();
+  getElement('waypoint-dialog').close();
+  getElement('waypoint-placement-status').textContent =
+    `Touchez la carte pour placer ${waypoint.name}`;
+  getElement('waypoint-placement').hidden = false;
+  map.setWaypointPlacementMode(true);
+
+  removeWaypointMapClickListener = map.onMapClick(async position => {
+    const placement = pendingWaypoint;
+    if (!placement) return;
+
+    stopWaypointPlacement();
+    const savedWaypoint = createWaypoint(position, placement.name, placement.type);
+    let message = `${getWaypointType(savedWaypoint.type).label} enregistré`;
+    if (waypointStorageAvailable) {
+      try {
+        await saveWaypoint(savedWaypoint);
+      } catch {
+        waypointStorageAvailable = false;
+        message = 'Repère conservé en session ; sauvegarde locale indisponible';
+      }
+    }
+
+    renderWaypoints();
+    getElement('waypoint-notice').textContent = message;
+    updateWaypointControls();
+  });
 }
 
 function closeRouteSheet() {
@@ -688,44 +738,53 @@ getElement('track-save').addEventListener('click', async event => {
 });
 
 getElement('add-waypoint').addEventListener('click', () => {
-  if (!latestPosition) return;
+  if (!waypointStorageInitialized || getActiveRoute()) return;
 
-  const nextNumber = getWaypoints().length + 1;
+  const type = getWaypointType(getElement('waypoint-type').value);
+  generatedWaypointName = defaultWaypointName(type);
   getElement('waypoint-position').textContent =
-    `${latestPosition.latitude.toFixed(6)}°, ${latestPosition.longitude.toFixed(6)}°`;
-  getElement('waypoint-name').value = `Waypoint ${nextNumber}`;
+    'Choisissez un type et un nom, puis placez-le sur la carte.';
+  getElement('waypoint-name').value = generatedWaypointName;
   getElement('waypoint-dialog').showModal();
   getElement('waypoint-name').select();
 });
 
 getElement('cancel-waypoint').addEventListener('click', () => {
   getElement('waypoint-dialog').close();
+  getElement('waypoint-form').reset();
+  generatedWaypointName = '';
 });
 
-getElement('waypoint-form').addEventListener('submit', async event => {
+getElement('waypoint-type').replaceChildren(...WAYPOINT_TYPES.map(type => {
+  const option = document.createElement('option');
+  option.value = type.id;
+  option.textContent = type.label;
+  return option;
+}));
+
+getElement('waypoint-type').addEventListener('change', event => {
+  if (!generatedWaypointName || getElement('waypoint-name').value !== generatedWaypointName) return;
+  const type = getWaypointType(event.currentTarget.value);
+  generatedWaypointName = defaultWaypointName(type);
+  getElement('waypoint-name').value = generatedWaypointName;
+});
+
+getElement('waypoint-name').addEventListener('input', () => {
+  if (getElement('waypoint-name').value !== generatedWaypointName) generatedWaypointName = '';
+});
+
+getElement('waypoint-form').addEventListener('submit', event => {
   event.preventDefault();
-  const name = getElement('waypoint-name').value.trim();
-  if (!name || !latestPosition) return;
-
-  const saveButton = event.currentTarget.querySelector('[type="submit"]');
-  saveButton.disabled = true;
-  const waypoint = createWaypoint(latestPosition, name);
-
-  if (waypointStorageAvailable) {
-    try {
-      await saveWaypoint(waypoint);
-      getElement('waypoint-notice').textContent = 'Waypoint enregistré';
-    } catch {
-      waypointStorageAvailable = false;
-      getElement('waypoint-notice').textContent =
-        'Sauvegarde locale indisponible ; waypoint gardé en session';
-    }
-  }
-
-  renderWaypoints();
-  getElement('waypoint-dialog').close();
+  const type = getWaypointType(getElement('waypoint-type').value);
+  const name = getElement('waypoint-name').value.trim() || defaultWaypointName(type);
+  beginWaypointPlacement({ name, type: type.id });
   getElement('waypoint-form').reset();
-  saveButton.disabled = false;
+  generatedWaypointName = '';
+});
+
+getElement('cancel-waypoint-placement').addEventListener('click', () => {
+  stopWaypointPlacement();
+  getElement('waypoint-notice').textContent = 'Placement annulé';
 });
 
 getElement('delete-dialog').addEventListener('close', async event => {

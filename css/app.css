@@ -522,6 +522,48 @@ button:disabled {
   cursor: crosshair;
 }
 
+#map .maplibregl-canvas.waypoint-placement {
+  cursor: crosshair;
+}
+
+.waypoint-placement {
+  position: fixed;
+  z-index: 22;
+  right: 12px;
+  bottom: calc(var(--map-control-clearance) + env(safe-area-inset-bottom) + 14px);
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 8px;
+  background: rgba(18,25,29,.96);
+  color: white;
+  box-shadow: 0 3px 18px rgba(0,0,0,.3);
+}
+
+.waypoint-placement[hidden] {
+  display: none;
+}
+
+.waypoint-placement p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #e8eeec;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waypoint-placement button {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,.12);
+  color: white;
+}
+
 .waypoint-sheet {
   position: fixed;
   z-index: 20;
@@ -635,15 +677,107 @@ button:disabled {
 .waypoint-marker {
   display: grid;
   width: 30px;
-  height: 30px;
+  height: 38px;
+  place-items: center;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.waypoint-marker span {
+  display: grid;
+  width: 24px;
+  height: 24px;
   place-items: center;
   border: 2px solid white;
-  border-radius: 50%;
-  background: #ed725c;
+  border-radius: 6px;
+  background: #667b82;
   box-shadow: 0 2px 5px rgba(0, 0, 0, .5);
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
+}
+
+.waypoint-marker-buoy-port span,
+.waypoint-marker-buoy-starboard span {
+  position: relative;
+  width: 17px;
+  height: 23px;
+  border-radius: 48% 48% 42% 42%;
+}
+
+.waypoint-marker-buoy-port span {
+  background: #dc504b;
+}
+
+.waypoint-marker-buoy-starboard span {
+  background: #268b68;
+}
+
+.waypoint-marker-buoy-port span::before,
+.waypoint-marker-buoy-starboard span::before {
+  position: absolute;
+  top: -7px;
+  width: 2px;
+  height: 7px;
+  background: white;
+  content: '';
+}
+
+.waypoint-marker-cardinal-north,
+.waypoint-marker-cardinal-south,
+.waypoint-marker-cardinal-east,
+.waypoint-marker-cardinal-west {
+  color: #172126;
+}
+
+.waypoint-marker-cardinal-north span {
+  clip-path: polygon(50% 0, 100% 100%, 50% 76%, 0 100%);
+  background: #f0c644;
+}
+
+.waypoint-marker-cardinal-south span {
+  clip-path: polygon(0 0, 50% 24%, 100% 0, 50% 100%);
+  background: #f0c644;
+}
+
+.waypoint-marker-cardinal-east span {
+  clip-path: polygon(0 0, 76% 50%, 0 100%, 24% 50%);
+  background: #f0c644;
+}
+
+.waypoint-marker-cardinal-west span {
+  clip-path: polygon(100% 0, 24% 50%, 100% 100%, 76% 50%);
+  background: #f0c644;
+}
+
+.waypoint-marker-wreck span {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #bd493f;
+  font-size: 31px;
+}
+
+.waypoint-marker-port span {
+  border-radius: 50% 50% 4px 4px;
+  background: #307fbd;
+  font-size: 17px;
+}
+
+.waypoint-marker-fishing-zone span {
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, #bc7a2b 0 4px, #8e5a21 4px 6px);
+}
+
+.waypoint-marker-other span {
+  transform: rotate(45deg);
+  border-radius: 3px;
+  background: #667b82;
+}
+
+.waypoint-marker-other span::first-letter {
+  transform: rotate(-45deg);
 }
 
 .waypoint-notice {
@@ -701,6 +835,18 @@ button:disabled {
   width: 100%;
   min-height: 44px;
   padding: 10px;
+  border: 1px solid #607170;
+  border-radius: 7px;
+  background: #10181b;
+  color: white;
+  font: inherit;
+  font-size: 16px;
+}
+
+.app-dialog select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
   border: 1px solid #607170;
   border-radius: 7px;
   background: #10181b;

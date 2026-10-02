@@ -78,7 +78,7 @@
     </div>
 
     <div class="bottom-sheet-actions">
-      <button id="menu-add-waypoint" class="primary-action" type="button">＋ Ajouter un waypoint</button>
+      <button id="menu-add-waypoint" class="primary-action" type="button">＋ Créer un repère nautique</button>
       <button id="menu-start-route" type="button">Créer une route</button>
       <button id="menu-toggle-waypoints" type="button">Waypoints <span id="menu-waypoint-count">0</span></button>
       <button id="menu-toggle-routes" type="button">Routes <span id="menu-route-count">0</span></button>
@@ -86,7 +86,7 @@
   </div>
 
   <nav id="map-actions" class="map-actions" aria-label="Actions carte">
-    <button id="add-waypoint" class="primary-action" aria-label="Ajouter un waypoint" disabled>＋ WP</button>
+    <button id="add-waypoint" class="primary-action" aria-label="Créer un repère nautique" disabled>＋ Repère</button>
     <button id="start-route">Créer route</button>
     <button id="toggle-waypoints" aria-expanded="false">WP <span id="waypoint-count">0</span></button>
     <button id="toggle-routes" aria-expanded="false">Routes <span id="route-count">0</span></button>
@@ -104,7 +104,7 @@
 
   <section id="waypoint-sheet" class="waypoint-sheet" aria-labelledby="waypoint-heading" hidden>
     <div class="sheet-heading">
-      <h2 id="waypoint-heading">Waypoints</h2>
+      <h2 id="waypoint-heading">Repères</h2>
       <button id="close-waypoints" class="icon-button" aria-label="Fermer la liste">×</button>
     </div>
     <p id="waypoint-empty">Aucun waypoint enregistré.</p>
@@ -122,15 +122,22 @@
     <ul id="route-list"></ul>
   </section>
 
+  <section id="waypoint-placement" class="waypoint-placement" aria-live="polite" hidden>
+    <p id="waypoint-placement-status">Touchez la carte pour placer le repère.</p>
+    <button id="cancel-waypoint-placement" type="button">Annuler</button>
+  </section>
+
   <dialog id="waypoint-dialog" class="app-dialog">
     <form id="waypoint-form">
-      <h2>Nouveau waypoint</h2>
+      <h2>Nouveau repère nautique</h2>
       <p id="waypoint-position"></p>
-      <label for="waypoint-name">Nom</label>
-      <input id="waypoint-name" name="name" maxlength="32" required autocomplete="off">
+      <label for="waypoint-type">Type</label>
+      <select id="waypoint-type" name="type"></select>
+      <label for="waypoint-name">Nom (facultatif)</label>
+      <input id="waypoint-name" name="name" maxlength="32" autocomplete="off">
       <div class="dialog-actions">
         <button type="button" id="cancel-waypoint">Annuler</button>
-        <button type="submit" class="primary-action">Enregistrer</button>
+        <button type="submit" class="primary-action">Placer sur la carte</button>
       </div>
     </form>
   </dialog>
@@ -202,6 +209,6 @@
   </dialog>
 
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=1.0.1"></script>
 </body>
 </html>

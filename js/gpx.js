@@ -13,6 +13,7 @@ export function parseGpx(xmlText) {
       return {
         id: createId('waypoint'),
         name: childText(element, 'name') || `Waypoint ${index + 1}`,
+        type: childText(element, 'type') || 'other',
         latitude: point.latitude,
         longitude: point.longitude,
         createdAt: point.timestamp ?? Date.now()
@@ -67,6 +68,7 @@ export function createGpx(data) {
   data.waypoints.forEach(waypoint => {
     const element = appendPoint(document, root, 'wpt', waypoint);
     appendText(document, element, 'name', waypoint.name);
+    appendText(document, element, 'type', waypoint.type || 'other');
     appendTime(document, element, waypoint.createdAt);
   });
 
