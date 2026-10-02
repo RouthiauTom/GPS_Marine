@@ -82,8 +82,6 @@ function updateTrackControls() {
   );
   recordButton.title = recordButton.getAttribute('aria-label');
   finalizeActions.hidden = !track || recording;
-  getElement('bottom-sheet').classList.toggle('has-paused-track', Boolean(track) && !recording);
-  document.body.classList.toggle('sheet-track-paused', Boolean(track) && !recording);
   saveButton.hidden = !track || recording;
   saveButton.disabled = !track || track.points.length < 2 || !routeStorageInitialized ||
     !routeStorageAvailable || Boolean(getActiveRoute());
@@ -111,7 +109,7 @@ function renderWaypoints() {
   getElement('waypoint-count').textContent = String(waypoints.length);
   getElement('menu-waypoint-count').textContent = String(waypoints.length);
   getElement('waypoint-empty').hidden = waypoints.length > 0;
-  map.updateWaypoints(waypoints);
+  map.updateWaypoints(waypoints, Boolean(activeNavigationRouteId));
 
   waypoints.forEach((waypoint, index) => {
     const row = document.createElement('li');
@@ -224,11 +222,13 @@ function renderRoutes() {
   getElement('route-count').textContent = String(routes.length);
   getElement('menu-route-count').textContent = String(routes.length);
   getElement('route-empty').hidden = routes.length > 0;
-  map.updateRoutes(routes, getActiveRoute());
+  map.updateRoutes(routes, getActiveRoute(), activeNavigationRouteId);
 
   routes.forEach(route => {
     const row = document.createElement('li');
-    row.className = activeNavigationRouteId === route.id ? 'waypoint-row route-row-selected' : 'waypoint-row';
+    row.className = activeNavigationRouteId === route.id
+      ? 'waypoint-row route-list-row route-row-selected'
+      : 'waypoint-row route-list-row';
 
     const info = document.createElement('div');
     info.className = 'waypoint-info';
@@ -242,20 +242,21 @@ function renderRoutes() {
     name.textContent = route.name;
     titleLine.append(color, name);
     const pointCount = document.createElement('span');
-    pointCount.textContent = `${route.points.length} points`;
+    pointCount.textContent = `${route.points.length} point${route.points.length === 1 ? '' : 's'}`;
     info.append(titleLine, pointCount);
 
     const controls = document.createElement('div');
-    controls.className = 'waypoint-controls';
+    controls.className = 'waypoint-controls route-list-actions';
 
     const followButton = document.createElement('button');
     followButton.type = 'button';
-    followButton.textContent = activeNavigationRouteId === route.id ? 'Stop' : 'Suivre';
+    followButton.textContent = activeNavigationRouteId === route.id ? 'Arrêter' : 'Suivre';
     followButton.classList.toggle('primary-action', activeNavigationRouteId === route.id);
     followButton.addEventListener('click', () => {
       activeNavigationRouteId = activeNavigationRouteId === route.id ? null : route.id;
       renderRoutes();
       renderNavigation();
+      renderWaypoints();
     });
 
     const centerButton = document.createElement('button');
@@ -876,7 +877,9 @@ getElement('delete-route-dialog').addEventListener('close', async event => {
   const routeId = routePendingDeletion;
   routePendingDeletion = null;
   removeRoute(routeId);
+  if (activeNavigationRouteId === routeId) activeNavigationRouteId = null;
   renderRoutes();
+  renderWaypoints();
 
   if (routeStorageAvailable) {
     try {

@@ -17,14 +17,25 @@
   <div id="map"></div>
 
   <div id="status" class="visually-hidden" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
+  <div id="track-status" class="visually-hidden" role="status" aria-live="polite">Trace arrêtée</div>
 
   <nav class="top-actions" aria-label="Actions principales">
     <button id="open-gpx" class="gpx-action" aria-label="Importer ou exporter GPX" title="Importer ou exporter GPX">GPX</button>
-    <button id="track-record" class="track-icon-button record-button" type="button" aria-label="Démarrer l'enregistrement" title="Démarrer l'enregistrement" disabled>
-      <span class="record-dot" aria-hidden="true"></span>
-      <svg class="track-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
-      <svg class="track-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z" /></svg>
-    </button>
+    <div class="track-control-stack">
+      <button id="track-record" class="track-icon-button record-button" type="button" aria-label="Démarrer l'enregistrement" title="Démarrer l'enregistrement" disabled>
+        <span class="record-dot" aria-hidden="true"></span>
+        <svg class="track-pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+        <svg class="track-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z" /></svg>
+      </button>
+      <div id="track-finalize-actions" class="track-finalize-actions" hidden>
+        <button id="track-save" class="track-icon-button" type="button" aria-label="Enregistrer la trace comme route" title="Enregistrer la trace comme route" hidden disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
+        </button>
+        <button id="track-clear" class="track-icon-button danger-action" type="button" aria-label="Supprimer la trace" title="Supprimer la trace" hidden disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
+        </button>
+      </div>
+    </div>
   </nav>
 
   <div id="bottom-sheet" class="bottom-sheet collapsed" role="region" tabindex="0" aria-expanded="false" aria-label="Panneau de navigation et actions. Faites glisser pour ouvrir ou fermer.">
@@ -64,16 +75,6 @@
         <span class="label">ETA</span>
         <strong id="eta">—</strong>
       </div>
-    </div>
-
-    <div id="track-finalize-actions" class="track-finalize-actions" hidden>
-      <span id="track-status" aria-live="polite">Trace arrêtée</span>
-      <button id="track-save" class="track-icon-button" type="button" aria-label="Enregistrer la trace comme route" title="Enregistrer la trace comme route" hidden disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
-      </button>
-      <button id="track-clear" class="track-icon-button danger-action" type="button" aria-label="Supprimer la trace" title="Supprimer la trace" hidden disabled>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
-      </button>
     </div>
 
     <div class="bottom-sheet-actions">

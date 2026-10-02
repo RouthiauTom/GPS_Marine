@@ -4,10 +4,11 @@ export function initializeMap(containerId) {
     style: 'https://tiles.openfreemap.org/styles/liberty',
     center: [-1.7, 49.35],
     zoom: 9,
-    attributionControl: true
+    attributionControl: false
   });
 
   map.addControl(new window.maplibregl.NavigationControl(), 'bottom-right');
+  map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-left');
 
   let boatMarker = null;
   let trackCoordinates = [];
@@ -15,6 +16,7 @@ export function initializeMap(containerId) {
   const routePointMarkers = new Map();
   let routes = [];
   let activeRoute = null;
+  let followingRouteId = null;
 
   function trackFeatureCollection() {
     const segments = new Map();
@@ -143,18 +145,20 @@ export function initializeMap(containerId) {
 
   function renderRoutePoints() {
     const points = [];
-    routes.filter(route => route.visible !== false).forEach(route => {
-      route.points.forEach((point, index) => {
-        points.push({
-          key: `${route.id}:${index}`,
-          point,
-          number: index + 1,
-          isDraft: false,
-          name: route.name,
-          color: route.color
+    if (!followingRouteId) {
+      routes.filter(route => route.visible !== false).forEach(route => {
+        route.points.forEach((point, index) => {
+          points.push({
+            key: `${route.id}:${index}`,
+            point,
+            number: index + 1,
+            isDraft: false,
+            name: route.name,
+            color: route.color
+          });
         });
       });
-    });
+    }
     activeRoute?.points.forEach((point, index) => {
       points.push({
         key: `draft:${index}`,
@@ -251,8 +255,9 @@ export function initializeMap(containerId) {
       renderTrack();
     },
 
-    updateWaypoints(waypoints) {
-      const waypointIds = new Set(waypoints.map(waypoint => waypoint.id));
+    updateWaypoints(waypoints, hidden = false) {
+      const visibleWaypoints = hidden ? [] : waypoints;
+      const waypointIds = new Set(visibleWaypoints.map(waypoint => waypoint.id));
 
       for (const [id, marker] of waypointMarkers) {
         if (!waypointIds.has(id)) {
@@ -261,7 +266,7 @@ export function initializeMap(containerId) {
         }
       }
 
-      waypoints.forEach((waypoint, index) => {
+      visibleWaypoints.forEach((waypoint, index) => {
         let marker = waypointMarkers.get(waypoint.id);
         if (!marker) {
           marker = createWaypointMarker(waypoint, index);
@@ -289,9 +294,10 @@ export function initializeMap(containerId) {
       else map.doubleClickZoom.enable();
     },
 
-    updateRoutes(savedRoutes, draftRoute = null) {
+    updateRoutes(savedRoutes, draftRoute = null, followedRouteId = null) {
       routes = savedRoutes;
       activeRoute = draftRoute;
+      followingRouteId = followedRouteId;
       renderRoutesAndPoints();
     },
 
