@@ -61,7 +61,6 @@ body.sheet-expanded {
   padding: 0;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
   clip-path: inset(50%);
 }
 
@@ -301,6 +300,14 @@ body.sheet-expanded {
   color: #10211d;
 }
 
+.bottom-sheet button:not(.primary-action):not(.danger-action),
+.waypoint-sheet button:not(.primary-action):not(.danger-action),
+.route-editor button:not(.primary-action):not(.danger-action),
+.app-dialog button:not(.primary-action):not(.danger-action),
+.waypoint-placement button {
+  border: 1px solid rgba(21,37,34,.22);
+}
+
 button {
   min-height: 36px;
   border: 0;
@@ -456,11 +463,11 @@ button:disabled {
   bottom: max(12px, env(safe-area-inset-bottom));
   left: 12px;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, .14);
-  border-radius: 10px;
-  background: rgba(18, 25, 29, .96);
-  color: white;
-  box-shadow: 0 3px 18px rgba(0, 0, 0, .3);
+  border: 1px solid rgba(21,37,34,.16);
+  border-radius: 12px;
+  background: #e8efec;
+  color: #152522;
+  box-shadow: 0 8px 24px rgba(0,0,0,.24);
 }
 
 .route-editor[hidden] {
@@ -469,7 +476,7 @@ button:disabled {
 
 .route-editor p {
   margin: 0 0 8px;
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 12px;
 }
 
@@ -537,11 +544,11 @@ button:disabled {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(255,255,255,.15);
+  border: 1px solid rgba(21,37,34,.16);
   border-radius: 8px;
-  background: rgba(18,25,29,.96);
-  color: white;
-  box-shadow: 0 3px 18px rgba(0,0,0,.3);
+  background: #e8efec;
+  color: #152522;
+  box-shadow: 0 8px 24px rgba(0,0,0,.24);
 }
 
 .waypoint-placement[hidden] {
@@ -552,7 +559,7 @@ button:disabled {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: #e8eeec;
+  color: #152522;
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -560,8 +567,8 @@ button:disabled {
 
 .waypoint-placement button {
   flex: 0 0 auto;
-  background: rgba(255,255,255,.12);
-  color: white;
+  background: #d4e0dc;
+  color: #152522;
 }
 
 .waypoint-sheet {
@@ -573,10 +580,12 @@ button:disabled {
   max-height: min(52vh, 430px);
   padding: 16px 16px calc(84px + env(safe-area-inset-bottom));
   overflow-y: auto;
+  border: 1px solid rgba(21,37,34,.16);
+  border-bottom: 0;
   border-radius: 14px 14px 0 0;
-  background: #172126;
-  color: white;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, .35);
+  background: #e8efec;
+  color: #152522;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, .24);
 }
 
 .waypoint-sheet[hidden] {
@@ -592,13 +601,13 @@ button:disabled {
 .icon-button {
   width: 40px;
   padding: 0;
-  background: rgba(255, 255, 255, .12);
-  color: white;
+  background: #d4e0dc;
+  color: #152522;
   font-size: 22px;
 }
 
 #waypoint-empty {
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 13px;
 }
 
@@ -613,12 +622,12 @@ button:disabled {
 
 .waypoint-row {
   padding: 10px 0;
-  border-top: 1px solid rgba(255, 255, 255, .12);
+  border-top: 1px solid rgba(21,37,34,.14);
 }
 
 .route-row-selected {
-  border-color: rgba(36, 214, 162, .7);
-  background: rgba(36, 214, 162, .1);
+  border-color: rgba(36, 145, 112, .55);
+  background: rgba(36, 145, 112, .1);
 }
 
 .route-list-row {
@@ -626,14 +635,14 @@ button:disabled {
   width: 100%;
   gap: 9px;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid rgba(21,37,34,.14);
   border-radius: 8px;
-  background: rgba(255, 255, 255, .035);
+  background: rgba(255,255,255,.55);
 }
 
 .route-list-row.route-row-selected {
-  border-color: rgba(36, 214, 162, .7);
-  background: rgba(36, 214, 162, .1);
+  border-color: rgba(36, 145, 112, .55);
+  background: rgba(36, 145, 112, .1);
 }
 
 .route-list-row .route-list-actions {
@@ -656,6 +665,11 @@ button:disabled {
   color: #10211d;
 }
 
+.waypoint-sheet button:not(.danger-action):not(.primary-action):not(.delete-waypoint) {
+  background: #d4e0dc;
+  color: #152522;
+}
+
 .waypoint-info {
   display: grid;
   min-width: 0;
@@ -669,7 +683,7 @@ button:disabled {
 }
 
 .waypoint-info span {
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
@@ -783,7 +797,7 @@ button:disabled {
 .waypoint-notice {
   min-height: 0;
   margin: 8px 0;
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 12px;
 }
 
@@ -798,9 +812,9 @@ button:disabled {
   padding: 7px 9px;
 }
 
-.waypoint-controls .delete-waypoint {
-  background: #4c2928;
-  color: #ffd9d6;
+.waypoint-sheet .waypoint-controls .delete-waypoint {
+  background: #a8403d;
+  color: white;
 }
 
 .app-dialog {
@@ -808,10 +822,11 @@ button:disabled {
   max-height: min(90dvh, 720px);
   padding: 20px;
   overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, .15);
+  border: 1px solid rgba(21,37,34,.16);
   border-radius: 12px;
-  background: #172126;
-  color: white;
+  background: #e8efec;
+  color: #152522;
+  box-shadow: 0 12px 36px rgba(0,0,0,.28);
 }
 
 .app-dialog::backdrop {
@@ -820,14 +835,14 @@ button:disabled {
 }
 
 .app-dialog p {
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 13px;
 }
 
 .app-dialog label {
   display: block;
   margin: 14px 0 6px;
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 12px;
 }
 
@@ -835,10 +850,10 @@ button:disabled {
   width: 100%;
   min-height: 44px;
   padding: 10px;
-  border: 1px solid #607170;
+  border: 1px solid #aebfba;
   border-radius: 7px;
-  background: #10181b;
-  color: white;
+  background: #fff;
+  color: #152522;
   font: inherit;
   font-size: 16px;
 }
@@ -847,10 +862,10 @@ button:disabled {
   width: 100%;
   min-height: 44px;
   padding: 9px 10px;
-  border: 1px solid #607170;
+  border: 1px solid #aebfba;
   border-radius: 7px;
-  background: #10181b;
-  color: white;
+  background: #fff;
+  color: #152522;
   font: inherit;
   font-size: 16px;
 }
@@ -886,8 +901,8 @@ button:disabled {
 .export-select-actions button {
   min-height: 36px;
   padding: 6px 8px;
-  background: rgba(255, 255, 255, .1);
-  color: white;
+  background: #d4e0dc;
+  color: #152522;
   font-size: 11px;
 }
 
@@ -900,7 +915,7 @@ button:disabled {
   min-width: 0;
   margin: 0;
   padding: 6px 10px 9px;
-  border: 1px solid rgba(255, 255, 255, .14);
+  border: 1px solid rgba(21,37,34,.16);
   border-radius: 8px;
 }
 
@@ -932,12 +947,12 @@ button:disabled {
   margin: 0;
   padding: 4px;
   border-radius: 5px;
-  color: white;
+  color: #152522;
   font-size: 12px;
 }
 
 .export-item:has(input:checked) {
-  background: rgba(36, 214, 162, .08);
+  background: rgba(36, 145, 112, .1);
 }
 
 .export-item span {
@@ -948,7 +963,7 @@ button:disabled {
 
 .export-empty {
   padding: 5px 4px;
-  color: #aeb8c2;
+  color: #52635f;
   font-size: 11px;
 }
 
