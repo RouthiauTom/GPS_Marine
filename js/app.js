@@ -1,6 +1,6 @@
-import { startWatching } from './gps.js';
-import { computeRouteNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js?v=1.0.1';
+import { startWatching, isFreshPosition, isUsablePosition } from './gps.js';
+import { computeRouteNavigation, advanceNavigation } from './navigation.mjs';
+import { initializeMap } from './map.js?v=1.1.0';
 import {
   addTrackPoint,
   clearTrack,
@@ -50,6 +50,14 @@ const map = initializeMap('map');
 let firstFix = true;
 const MIN_COG_SPEED = 0.5;
 let activeNavigationRouteId = null;
+let navigationState = { targetIndex: 0, completed: false };
+let gpsError = '';
+let trackBusy = false;
+let trackSaveQueue = Promise.resolve(true);
+let lastTrackSave = 0;
+let lastTrackRender = 0;
+const sessionTracks = new Map();
+const deletedTracks = new Set();
 let bottomSheetOpen = false;
 let sheetTouchStartY = null;
 let trackStorageAvailable = true;
@@ -78,7 +86,7 @@ function updateTrackControls() {
   const clearButton = getElement('track-clear');
   const finalizeActions = getElement('track-finalize-actions');
 
-  recordButton.disabled = !trackStorageInitialized;
+  recordButton.disabled = !trackStorageInitialized || trackBusy;
   recordButton.classList.toggle('is-recording', recording);
   recordButton.classList.toggle('is-paused', Boolean(track) && !recording);
   recordButton.setAttribute(
@@ -88,19 +96,30 @@ function updateTrackControls() {
   recordButton.title = recordButton.getAttribute('aria-label');
   finalizeActions.hidden = !track || recording;
   saveButton.hidden = !track || recording;
-  saveButton.disabled = !track || track.points.length < 2 || !routeStorageInitialized ||
-    !routeStorageAvailable || Boolean(getActiveRoute());
+  saveButton.disabled = !track || track.points.length === 0 || trackBusy;
+  getElement('track-to-route').disabled = !track || track.points.length < 2 ||
+    Boolean(getActiveRoute()) || trackBusy || !routeStorageInitialized;
   clearButton.hidden = !track || recording;
-  clearButton.disabled = !track;
+  clearButton.disabled = !track || trackBusy;
 }
 
-function persistTrack(track) {
-  if (!trackStorageAvailable || !track) return;
-
-  saveTrack(track).catch(() => {
-    trackStorageAvailable = false;
-    setTrackStatus('Sauvegarde locale indisponible ; trace gardée en mémoire');
+function persistTrack(track, immediate = true) {
+  if (!track) return Promise.resolve(false);
+  if (!immediate && Date.now() - lastTrackSave < 5000) return trackSaveQueue;
+  lastTrackSave = Date.now();
+  const snapshot = { ...track, points: [...track.points] };
+  trackSaveQueue = trackSaveQueue.then(async () => {
+    try {
+      await saveTrack(snapshot);
+      trackStorageAvailable = true;
+      return true;
+    } catch {
+      trackStorageAvailable = false;
+      setTrackStatus('Sauvegarde indisponible : exportez le GPX avant de fermer.');
+      return false;
+    }
   });
+  return trackSaveQueue;
 }
 
 function updateWaypointControls() {
@@ -114,7 +133,7 @@ function renderWaypoints() {
   getElement('waypoint-count').textContent = String(waypoints.length);
   getElement('menu-waypoint-count').textContent = String(waypoints.length);
   getElement('waypoint-empty').hidden = waypoints.length > 0;
-  map.updateWaypoints(waypoints, Boolean(activeNavigationRouteId));
+  map.updateWaypoints(waypoints);
 
   waypoints.forEach((waypoint, index) => {
     const type = getWaypointType(waypoint.type);
@@ -242,14 +261,18 @@ function renderNavigation() {
   document.body.classList.toggle('sheet-following-route', Boolean(route));
   getElement('navigation-route-name').hidden = !route;
   getElement('navigation-instruments').hidden = !route;
+  getElement('navigation-controls').hidden = !route;
+  getElement('navigation-previous').disabled = navigationState.targetIndex === 0;
+  getElement('navigation-next').disabled = !route || navigationState.targetIndex >= route.points.length - 1;
+  map.updateNavigation(route, navigationState.targetIndex);
+  setNavigationTitle(route);
 
   const setValue = (id, value) => {
     const element = getElement(id);
     if (element) element.textContent = value;
   };
 
-  if (!route || !latestPosition) {
-    setValue('navigation-route-name', '');
+  if (!route || !isUsablePosition(latestPosition) || gpsError || navigationState.completed) {
     setValue('xte', '—');
     setValue('dtw', '—');
     setValue('brg', '—');
@@ -257,12 +280,17 @@ function renderNavigation() {
     return;
   }
 
-  const metrics = computeRouteNavigation(route, latestPosition, Number.isFinite(latestPosition.speed) ? latestPosition.speed : 0);
-  setValue('navigation-route-name', route.name);
+  const metrics = computeRouteNavigation(route, latestPosition, latestPosition.speed ?? 0, navigationState.targetIndex);
   setValue('xte', metrics.xteMeters === null ? '—' : `${metrics.xteMeters >= 0 ? '+' : '-'}${Math.round(Math.abs(metrics.xteMeters))} m`);
   setValue('dtw', metrics.distanceToWaypointMeters === null ? '—' : `${Math.round(metrics.distanceToWaypointMeters)} m`);
-  setValue('brg', metrics.bearingDegrees === null ? '—' : `${Math.round(metrics.bearingDegrees)}°`);
+  setValue('brg', metrics.bearingDegrees === null ? '—' : `${Math.round(metrics.bearingDegrees) % 360}°`);
   setValue('eta', metrics.etaText);
+}
+
+function setNavigationTitle(route) {
+  getElement('navigation-route-name').textContent = !route ? '' :
+    `${route.name} · ${navigationState.completed ? 'Arrivée atteinte' :
+      `Point ${navigationState.targetIndex + 1}/${route.points.length}`}`;
 }
 
 function renderRoutes() {
@@ -272,7 +300,7 @@ function renderRoutes() {
   getElement('route-count').textContent = String(routes.length);
   getElement('menu-route-count').textContent = String(routes.length);
   getElement('route-empty').hidden = routes.length > 0;
-  map.updateRoutes(routes, getActiveRoute(), activeNavigationRouteId);
+  map.updateRoutes(routes, getActiveRoute());
 
   routes.forEach(route => {
     const row = document.createElement('li');
@@ -304,6 +332,11 @@ function renderRoutes() {
     followButton.classList.toggle('primary-action', activeNavigationRouteId === route.id);
     followButton.addEventListener('click', () => {
       activeNavigationRouteId = activeNavigationRouteId === route.id ? null : route.id;
+      navigationState = { targetIndex: 0, completed: false };
+      if (activeNavigationRouteId) {
+        route.visible = true;
+        map.centerOnRoute(route);
+      }
       renderRoutes();
       renderNavigation();
       renderWaypoints();
@@ -314,6 +347,10 @@ function renderRoutes() {
     centerButton.textContent = route.visible ? 'Masquer' : 'Afficher';
     centerButton.setAttribute('aria-pressed', String(route.visible));
     centerButton.addEventListener('click', async () => {
+      if (route.id === activeNavigationRouteId) {
+        getElement('route-notice').textContent = 'Arrêtez le suivi avant de masquer cette route.';
+        return;
+      }
       const updatedRoute = toggleRouteVisibility(route.id);
       if (!updatedRoute) return;
 
@@ -364,16 +401,20 @@ function setGpxStatus(message) {
 }
 
 async function importGpxFile(file) {
-  if (isTracking()) {
-    setGpxStatus('Arrêtez l’enregistrement de trace avant l’import.');
+  if (getCurrentTrack() || trackBusy) {
+    setGpxStatus('Archivez ou supprimez la trace en cours avant l’import.');
     return;
   }
 
   const importButton = getElement('import-gpx');
   importButton.disabled = true;
+  trackBusy = true;
+  updateTrackControls();
 
   try {
+    if (file.size > 20 * 1024 * 1024) throw new Error('Fichier trop volumineux (maximum 20 Mo).');
     const importedData = parseGpx(await file.text());
+    importedData.tracks.forEach(track => { track.archived = true; });
     const totalItems =
       importedData.waypoints.length + importedData.routes.length + importedData.tracks.length;
     if (totalItems === 0) throw new Error('Ce fichier GPX ne contient aucun élément exploitable.');
@@ -401,12 +442,10 @@ async function importGpxFile(file) {
     setRoutes(updatedRoutes);
     renderRoutes();
 
-    if (importedData.tracks.length > 0) {
-      const latestImportedTrack = importedData.tracks.at(-1);
-      const restoredTrack = restoreTrack(latestImportedTrack);
-      map.updateTrack(restoredTrack);
-      setTrackStatus(`Trace importée · ${restoredTrack.points.length} points`);
-      updateTrackControls();
+    importedData.tracks.forEach(track => sessionTracks.set(track.id, track));
+    if (importedData.tracks.length) {
+      map.updateTrack(importedData.tracks.at(-1));
+      setTrackStatus('Traces importées dans les sorties.');
     }
 
     await refreshExportSelection();
@@ -420,6 +459,8 @@ async function importGpxFile(file) {
     setGpxStatus(error.message || 'Impossible d’importer ce fichier GPX.');
   } finally {
     importButton.disabled = false;
+    trackBusy = false;
+    updateTrackControls();
     getElement('gpx-file').value = '';
   }
 }
@@ -516,11 +557,14 @@ async function refreshExportSelection() {
   setGpxStatus('Chargement des éléments…');
 
   try {
-    const [waypoints, routes, tracks] = await Promise.all([
-      loadWaypoints(),
-      loadRoutes(),
-      loadTracks()
-    ]);
+    const results = await Promise.allSettled([loadWaypoints(), loadRoutes(), loadTracks()]);
+    const merge = (saved, memory) => [...new Map([...saved, ...memory].map(item => [item.id, item])).values()];
+    const saved = index => results[index].status === 'fulfilled' ? results[index].value : [];
+    const waypoints = waypointStorageInitialized ? getWaypoints() : saved(0);
+    const routes = routeStorageInitialized ? getRoutes() : saved(1);
+    const current = getCurrentTrack();
+    const tracks = merge(saved(2), [...sessionTracks.values(), ...(current ? [current] : [])])
+      .filter(track => !deletedTracks.has(track.id));
     gpxExportData = { waypoints, routes, tracks };
 
     renderExportCategory(
@@ -541,7 +585,8 @@ async function refreshExportSelection() {
       track => `${track.name || 'Trace'} · ${track.points.length} points · ${new Date(track.startedAt).toLocaleDateString('fr-FR')}`,
       'Aucune trace'
     );
-    setGpxStatus('');
+    setGpxStatus(results.some(result => result.status === 'rejected') ?
+      'Stockage inaccessible : export des données disponibles en session.' : '');
     updateExportSelectionState();
   } catch {
     setGpxStatus('Impossible de lire les données locales.');
@@ -570,8 +615,10 @@ function beginRouteCreation() {
 
 function updateInterface(position) {
   latestPosition = position;
+  gpsError = '';
+  updateGpsHealth();
   updateWaypointControls();
-  getElement('accuracy').textContent = position.accuracy
+  getElement('accuracy').textContent = Number.isFinite(position.accuracy)
     ? Math.round(position.accuracy) + ' m'
     : '—';
   getElement('speed-bottom').textContent = Number.isFinite(position.speed)
@@ -584,17 +631,24 @@ function updateInterface(position) {
     : '—';
 
   map.updateBoatPosition(position, hasReliableCourse ? position.course : null);
-  getElement('status').textContent = 'GPS : position reçue';
+  const route = getRoutes().find(item => item.id === activeNavigationRouteId);
+  if (route && isUsablePosition(position)) {
+    navigationState = advanceNavigation(route, position, navigationState);
+  }
+  updateGpsHealth();
   renderNavigation();
 
-  if (isTracking()) {
+  if (isTracking() && isUsablePosition(position)) {
     const track = addTrackPoint(position);
-    map.updateTrack(track);
-    persistTrack(track);
-    setTrackStatus(`Enregistrement en cours · ${track.points.length} points`);
+    if (Date.now() - lastTrackRender >= 2000) {
+      map.updateTrack(track);
+      lastTrackRender = Date.now();
+    }
+    persistTrack(track, false);
+    if (trackStorageAvailable) setTrackStatus(`Enregistrement en cours · ${track.points.length} points`);
   }
 
-  if (firstFix) {
+  if (firstFix && isUsablePosition(position)) {
     map.centerOnBoat(15);
     firstFix = false;
   }
@@ -608,8 +662,46 @@ function showGpsError(error) {
     3: 'GPS : délai dépassé.'
   };
 
-  getElement('status').textContent = messages[error.code] || 'GPS : erreur inconnue.';
+  gpsError = messages[error.code] || 'GPS : erreur inconnue.';
+  updateGpsHealth();
+  renderNavigation();
 }
+
+function updateGpsHealth() {
+  const fresh = isFreshPosition(latestPosition);
+  const usable = isUsablePosition(latestPosition) && !gpsError;
+  document.body.classList.toggle('gps-unreliable', !usable);
+  map.setGpsStale(!usable);
+  const age = latestPosition ? Math.max(0, Math.floor((Date.now() - latestPosition.timestamp) / 1000)) : null;
+  getElement('status').textContent = (gpsError ? `${gpsError}${age === null ? '' : ` · dernière position il y a ${age} s`}` : '') || (!latestPosition ? 'GPS : attente de position…' :
+    !fresh ? `GPS perdu · dernière position il y a ${age} s` :
+    !usable ? `GPS imprécis · ± ${Math.round(latestPosition.accuracy)} m` :
+    `GPS actif · position il y a ${age} s`);
+  if (!usable) {
+    ['speed-bottom', 'course', 'xte', 'dtw', 'brg', 'eta'].forEach(id => { getElement(id).textContent = '—'; });
+  }
+}
+
+setInterval(updateGpsHealth, 1000);
+document.addEventListener('visibilitychange', () => {
+  updateGpsHealth();
+  if (document.hidden && !trackBusy) persistTrack(getCurrentTrack());
+});
+window.addEventListener('pagehide', () => { if (!trackBusy) persistTrack(getCurrentTrack()); });
+
+getElement('navigation-previous').addEventListener('click', () => {
+  navigationState = { targetIndex: Math.max(0, navigationState.targetIndex - 1), completed: false };
+  renderNavigation();
+});
+getElement('navigation-next').addEventListener('click', () => {
+  const route = getRoutes().find(item => item.id === activeNavigationRouteId);
+  if (route) navigationState = { targetIndex: Math.min(route.points.length - 1, navigationState.targetIndex + 1), completed: false };
+  renderNavigation();
+});
+getElement('navigation-stop').addEventListener('click', () => {
+  activeNavigationRouteId = null;
+  renderRoutes();
+});
 
 const bottomSheet = getElement('bottom-sheet');
 
@@ -661,9 +753,12 @@ getElement('menu-toggle-routes').addEventListener('click', () => {
   getElement('toggle-routes').click();
 });
 
-getElement('locate').addEventListener('click', () => map.centerOnBoat());
+getElement('locate').addEventListener('click', () => {
+  if (!map.centerOnBoat()) getElement('status').textContent = 'GPS : aucune position pour recentrer.';
+});
 
 getElement('track-record').addEventListener('click', () => {
+  if (trackBusy) return;
   const track = isTracking() ? stopTracking() : startTracking();
   if (!track) return;
 
@@ -676,66 +771,113 @@ getElement('track-record').addEventListener('click', () => {
 });
 
 getElement('track-clear').addEventListener('click', async () => {
-  const track = clearTrack();
-  if (!track) return;
-
-  map.updateTrack({ points: [] });
+  const track = getCurrentTrack();
+  if (!track || trackBusy || !window.confirm('Supprimer définitivement cette trace ?')) return;
+  trackBusy = true;
   updateTrackControls();
-  setTrackStatus('Effacement de la trace…');
-  if (trackStorageAvailable) {
-    try {
-      await deleteTrack(track.id);
-    } catch {
-      trackStorageAvailable = false;
-      setTrackStatus('Trace effacée de la session ; suppression locale impossible');
-    }
+  await trackSaveQueue;
+  try {
+    await deleteTrack(track.id);
+    deletedTracks.add(track.id);
+    sessionTracks.delete(track.id);
+    clearTrack();
+    map.updateTrack({ points: [] });
+    setTrackStatus('Trace supprimée');
+  } catch {
+    setTrackStatus('Suppression impossible : trace conservée.');
+  } finally {
+    trackBusy = false;
+    updateTrackControls();
   }
+});
 
-  if (trackStorageAvailable) setTrackStatus('Trace effacée');
+getElement('track-save').addEventListener('click', async () => {
+  const track = getCurrentTrack();
+  if (!track || isTracking() || trackBusy || !track.points.length) return;
+  trackBusy = true;
+  updateTrackControls();
+  const archived = { ...track, archived: true,
+    name: track.name || `Sortie du ${new Date(track.startedAt).toLocaleString('fr-FR')}` };
+  if (await persistTrack(archived)) {
+    sessionTracks.set(archived.id, archived);
+    clearTrack();
+    setTrackStatus('Sortie archivée · disponible dans Sorties et GPX');
+  }
+  trackBusy = false;
   updateTrackControls();
 });
 
-getElement('track-save').addEventListener('click', async event => {
-  const track = getCurrentTrack();
-  if (!track || isTracking() || track.points.length < 2 || getActiveRoute() || !routeStorageAvailable) return;
-
-  const routeName = `Trace du ${new Date(track.startedAt).toLocaleDateString('fr-FR')}`;
-  startRoute(routeName);
-  track.points.forEach(point => addRoutePoint(point));
-  const route = saveActiveRoute(routeName);
-  if (!route) {
-    cancelActiveRoute();
+async function convertTrackToRoute(track) {
+  if (!track || track.points.length < 2 || getActiveRoute() || trackBusy) return;
+  if (new Set(track.points.map(point => point.segment ?? 0)).size > 1) {
+    setTrackStatus('Cette trace contient des interruptions : créez une route manuellement pour éviter de les relier.');
     return;
   }
-
-  event.currentTarget.disabled = true;
-  renderRoutes();
+  trackBusy = true;
+  updateTrackControls();
+  const name = track.name || `Trace du ${new Date(track.startedAt).toLocaleDateString('fr-FR')}`;
+  startRoute(name);
+  track.points.forEach(point => addRoutePoint(point));
+  const route = saveActiveRoute(name);
   try {
     await saveRoute(route);
-  } catch {
-    routeStorageAvailable = false;
-    removeRoute(route.id);
     renderRoutes();
-    setTrackStatus('Route non sauvegardée ; trace conservée');
+    setTrackStatus('Route créée · trace originale conservée');
+  } catch {
+    removeRoute(route.id);
+    setTrackStatus('Route non sauvegardée · trace originale conservée');
+  } finally {
+    trackBusy = false;
     updateTrackControls();
-    return;
   }
+}
+getElement('track-to-route').addEventListener('click', () => convertTrackToRoute(getCurrentTrack()));
 
-  clearTrack();
-  map.updateTrack({ points: [] });
-  let status = `Trace enregistrée comme route : ${route.name}`;
-  if (trackStorageAvailable) {
-    try {
-      await deleteTrack(track.id);
-    } catch {
-      trackStorageAvailable = false;
-      status = 'Route enregistrée ; ancienne trace conservée dans le stockage local';
-    }
+async function renderTrackLibrary() {
+  const list = getElement('track-list');
+  list.replaceChildren();
+  try {
+    (await loadTracks()).forEach(track => sessionTracks.set(track.id, track));
+    getElement('track-library-notice').textContent = 'Les traces originales restent conservées après conversion en route.';
+  } catch {
+    getElement('track-library-notice').textContent = 'Stockage inaccessible : sorties disponibles en session uniquement.';
   }
-
-  setTrackStatus(status);
-  updateTrackControls();
+  const tracks = [...sessionTracks.values()].filter(track => track.id !== getCurrentTrack()?.id && !deletedTracks.has(track.id));
+  getElement('track-empty').hidden = tracks.length > 0;
+  for (const track of tracks) {
+    const row = document.createElement('li');
+    const title = document.createElement('strong');
+    title.textContent = `${track.name || 'Trace'} · ${track.points.length} points · ${new Date(track.startedAt).toLocaleDateString('fr-FR')}`;
+    const controls = document.createElement('div');
+    controls.className = 'library-actions';
+    const action = (label, handler) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = label; button.addEventListener('click', handler);
+      controls.append(button);
+    };
+    action('Afficher', () => {
+      if (isTracking()) { getElement('track-library-notice').textContent = 'Mettez l’enregistrement en pause pour afficher une autre trace.'; return; }
+      map.updateTrack(track); map.centerOnRoute(track); getElement('track-library').close();
+    });
+    action('Créer une route', async () => {
+      await convertTrackToRoute(track);
+      getElement('track-library-notice').textContent = getElement('track-status').textContent;
+    });
+    action('Supprimer', async () => {
+      if (!window.confirm('Supprimer définitivement cette sortie ?')) return;
+      try {
+        await deleteTrack(track.id); sessionTracks.delete(track.id); deletedTracks.add(track.id);
+        map.updateTrack(getCurrentTrack() || { points: [] });
+        await renderTrackLibrary();
+      } catch { getElement('track-library-notice').textContent = 'Suppression impossible : sortie conservée.'; }
+    });
+    row.append(title, controls); list.append(row);
+  }
+}
+getElement('menu-tracks').addEventListener('click', () => {
+  getElement('track-library').showModal(); renderTrackLibrary();
 });
+getElement('close-track-library').addEventListener('click', () => getElement('track-library').close());
 
 getElement('add-waypoint').addEventListener('click', () => {
   if (!waypointStorageInitialized || getActiveRoute()) return;
@@ -890,8 +1032,8 @@ getElement('toggle-routes').addEventListener('click', event => {
 getElement('close-routes').addEventListener('click', closeRouteSheet);
 
 getElement('open-gpx').addEventListener('click', () => {
-  setGpxStatus(isTracking()
-    ? 'Arrêtez l’enregistrement de trace avant l’import GPX.'
+  setGpxStatus(getCurrentTrack()
+    ? 'Archivez ou supprimez la trace en cours avant l’import GPX.'
     : '');
   getElement('gpx-dialog').showModal();
   refreshExportSelection();
@@ -902,8 +1044,8 @@ getElement('close-gpx').addEventListener('click', () => {
 });
 
 getElement('import-gpx').addEventListener('click', () => {
-  if (isTracking()) {
-    setGpxStatus('Arrêtez l’enregistrement de trace avant l’import.');
+  if (getCurrentTrack() || trackBusy) {
+    setGpxStatus('Archivez ou supprimez la trace en cours avant l’import.');
     return;
   }
 

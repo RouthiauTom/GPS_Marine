@@ -1,11 +1,13 @@
 let currentTrack = null;
 let tracking = false;
+let newSegment = false;
 
 export function startTracking() {
   if (tracking) return currentTrack;
 
   if (currentTrack) {
     currentTrack.stoppedAt = null;
+    newSegment = true;
     tracking = true;
     return currentTrack;
   }
@@ -32,7 +34,13 @@ export function stopTracking() {
 export function addTrackPoint(position) {
   if (!tracking) return currentTrack;
 
+  const previous = currentTrack.points.at(-1);
+  if (previous && position.timestamp <= previous.timestamp) return currentTrack;
+  const segment = (previous?.segment ?? 0) + (previous &&
+    (newSegment || position.timestamp - previous.timestamp > 15000) ? 1 : 0);
+  newSegment = false;
   currentTrack.points.push({
+    segment,
     latitude: position.latitude,
     longitude: position.longitude,
     timestamp: position.timestamp,
@@ -50,6 +58,7 @@ export function clearTrack() {
   const track = currentTrack;
   currentTrack = null;
   tracking = false;
+  newSegment = false;
   return track;
 }
 

@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V0.9</title>
+  <title>Marine GPS V1.1</title>
 
   <link
-    href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css"
+    href="https://unpkg.com/maplibre-gl@6.14.0/dist/maplibre-gl.css"
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.0.3">
+  <link rel="stylesheet" href="./css/app.css?v=1.1.0">
 </head>
 
 <body>
   <div id="map"></div>
 
-  <div id="status" class="visually-hidden" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
-  <div id="track-status" class="visually-hidden" role="status" aria-live="polite">Trace arrêtée</div>
+  <div id="status" class="app-status" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
+  <div id="track-status" class="app-status" role="status" aria-live="polite">Trace arrêtée</div>
 
   <nav class="top-actions" aria-label="Actions principales">
     <button id="open-gpx" class="gpx-action" aria-label="Importer ou exporter GPX" title="Importer ou exporter GPX">GPX</button>
@@ -28,9 +28,10 @@
         <svg class="track-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z" /></svg>
       </button>
       <div id="track-finalize-actions" class="track-finalize-actions" hidden>
-        <button id="track-save" class="track-icon-button" type="button" aria-label="Enregistrer la trace comme route" title="Enregistrer la trace comme route" hidden disabled>
+        <button id="track-save" class="track-icon-button" type="button" aria-label="Archiver la sortie" title="Archiver la sortie" hidden disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
         </button>
+        <button id="track-to-route" type="button">Créer une route</button>
         <button id="track-clear" class="track-icon-button danger-action" type="button" aria-label="Supprimer la trace" title="Supprimer la trace" hidden disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
         </button>
@@ -72,25 +73,33 @@
         <strong id="brg">—</strong>
       </div>
       <div class="instrument">
-        <span class="label">ETA</span>
+        <span class="label" title="Durée estimée restante">ETE</span>
         <strong id="eta">—</strong>
       </div>
     </div>
 
+    <div id="navigation-controls" class="navigation-controls" hidden>
+      <button id="navigation-previous" type="button">← Précédent</button>
+      <button id="navigation-next" type="button">Suivant →</button>
+      <button id="navigation-stop" type="button">Terminer</button>
+    </div>
+
     <div class="bottom-sheet-actions">
       <button id="menu-add-waypoint" class="primary-action" type="button">＋ Créer un repère nautique</button>
+      <button id="menu-tracks" type="button">Sorties enregistrées</button>
       <button id="menu-start-route" type="button">Créer une route</button>
       <button id="menu-toggle-waypoints" type="button">Waypoints <span id="menu-waypoint-count">0</span></button>
       <button id="menu-toggle-routes" type="button">Routes <span id="menu-route-count">0</span></button>
     </div>
   </div>
 
+  <button id="locate" class="locate-action" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">◎</button>
+
   <nav id="map-actions" class="map-actions" aria-label="Actions carte">
     <button id="add-waypoint" class="primary-action" aria-label="Créer un repère nautique" disabled>＋ Repère</button>
     <button id="start-route">Créer route</button>
     <button id="toggle-waypoints" aria-expanded="false">WP <span id="waypoint-count">0</span></button>
     <button id="toggle-routes" aria-expanded="false">Routes <span id="route-count">0</span></button>
-    <button id="locate" class="locate-action" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">◎</button>
   </nav>
 
   <section id="route-editor" class="route-editor" aria-label="Création de route" hidden>
@@ -208,7 +217,15 @@
     <p id="gpx-status" role="status" aria-live="polite"></p>
   </dialog>
 
-  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
-  <script type="module" src="./js/app.js?v=1.0.1"></script>
+  <dialog id="track-library" class="app-dialog" aria-labelledby="track-library-title">
+    <div class="sheet-heading"><h2 id="track-library-title">Sorties enregistrées</h2>
+      <button id="close-track-library" class="icon-button" type="button" aria-label="Fermer les sorties">×</button></div>
+    <p id="track-library-notice" role="status"></p>
+    <p id="track-empty">Aucune sortie archivée.</p>
+    <ul id="track-list"></ul>
+    <p>Utilisez le menu GPX pour exporter vos sorties.</p>
+  </dialog>
+
+  <script type="module" src="./js/app.js?v=1.1.0"></script>
 </body>
 </html>

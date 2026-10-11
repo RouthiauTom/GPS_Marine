@@ -67,9 +67,9 @@ export function createGpx(data) {
 
   data.waypoints.forEach(waypoint => {
     const element = appendPoint(document, root, 'wpt', waypoint);
+    appendTime(document, element, waypoint.createdAt);
     appendText(document, element, 'name', waypoint.name);
     appendText(document, element, 'type', waypoint.type || 'other');
-    appendTime(document, element, waypoint.createdAt);
   });
 
   data.routes.forEach(route => {
@@ -129,8 +129,13 @@ function appendTime(document, parent, timestamp) {
 }
 
 function parsePoint(element) {
-  const latitude = Number(element.getAttribute('lat'));
-  const longitude = Number(element.getAttribute('lon'));
+  const latitudeText = element.getAttribute('lat');
+  const longitudeText = element.getAttribute('lon');
+  if (!latitudeText?.trim() || !longitudeText?.trim()) {
+    throw new Error('Le fichier contient des coordonnées GPS vides.');
+  }
+  const latitude = Number(latitudeText);
+  const longitude = Number(longitudeText);
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 ||
       !Number.isFinite(longitude) || longitude < -180 || longitude > 180 ||
       element.getAttribute('lat') === null || element.getAttribute('lon') === null) {

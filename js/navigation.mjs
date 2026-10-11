@@ -18,7 +18,7 @@ export function distanceMeters(first, second) {
     Math.sin(deltaLatitude / 2) ** 2 +
     Math.cos(latitude1) * Math.cos(latitude2) * Math.sin(deltaLongitude / 2) ** 2;
 
-  return 2 * 6371000 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+  return 2 * 6371000 * Math.atan2(Math.sqrt(value), Math.sqrt(Math.max(0, 1 - value)));
 }
 
 export function bearingBetween(first, second) {
@@ -57,91 +57,51 @@ export function formatEta(seconds) {
   return `${String(secs).padStart(2, '0')}s`;
 }
 
-function segmentProjection(position, start, end) {
-  const deltaLongitude = end.longitude - start.longitude;
-  const deltaLatitude = end.latitude - start.latitude;
-
-  if (deltaLongitude === 0 && deltaLatitude === 0) {
-    return {
-      projectedLatitude: start.latitude,
-      projectedLongitude: start.longitude,
-      progress: 0,
-      sign: 0
-    };
-  }
-
-  const dx = position.longitude - start.longitude;
-  const dy = position.latitude - start.latitude;
-  const segmentLengthSquare = deltaLongitude * deltaLongitude + deltaLatitude * deltaLatitude;
-  const projection = Math.max(0, Math.min(1, (dx * deltaLongitude + dy * deltaLatitude) / segmentLengthSquare));
-  const projectedLongitude = start.longitude + deltaLongitude * projection;
-  const projectedLatitude = start.latitude + deltaLatitude * projection;
-  const cross = deltaLongitude * (position.latitude - start.latitude) - deltaLatitude * (position.longitude - start.longitude);
-
-  return {
-    projectedLatitude,
-    projectedLongitude,
-    progress: projection,
-    sign: cross >= 0 ? 1 : -1
-  };
+// Signed geodesic cross-track distance: positive to port of the active leg.
+export function crossTrackMeters(position, start, end) {
+  const legBearing = bearingBetween(start, end);
+  const positionBearing = bearingBetween(start, position);
+  if (legBearing === null || positionBearing === null) return 0;
+  const angularDistance = distanceMeters(start, position) / 6371000;
+  const value = Math.sin(angularDistance) * Math.sin(toRadians(positionBearing - legBearing));
+  return -Math.asin(Math.max(-1, Math.min(1, value))) * 6371000;
 }
 
-export function computeRouteNavigation(route, position, speedMps = 0) {
-  if (!route || !position || !Array.isArray(route.points) || route.points.length < 2) {
+export const ARRIVAL_RADIUS_METERS = 30;
+
+export function advanceNavigation(route, position, state, radius = ARRIVAL_RADIUS_METERS) {
+  if (!route?.points?.length || !position || state.completed) return state;
+  // Poor fixes must never trigger arrival. Move at most one step per accepted fix.
+  if (!Number.isFinite(position.accuracy) || position.accuracy > radius) return state;
+  const target = route.points[state.targetIndex];
+  if (!target || distanceMeters(position, target) > radius) return state;
+  if (state.targetIndex === route.points.length - 1) return { ...state, completed: true };
+  return { ...state, targetIndex: state.targetIndex + 1 };
+}
+
+export function computeRouteNavigation(route, position, speedMps = 0, targetIndex = 0) {
+  const targetPoint = route?.points?.[targetIndex];
+  if (!targetPoint || !position) {
     return {
-      routeName: route?.name ?? 'Aucune route',
-      xteMeters: null,
-      distanceToWaypointMeters: null,
-      bearingDegrees: null,
-      remainingDistanceMeters: null,
-      etaText: '—',
-      waypointIndex: null
+      routeName: route?.name ?? 'Aucune route', xteMeters: null,
+      distanceToWaypointMeters: null, bearingDegrees: null,
+      remainingDistanceMeters: null, etaText: '—', waypointIndex: null
     };
   }
-
-  let selectedSegmentIndex = 0;
-  let selectedProjection = null;
-  let shortestDistance = Number.POSITIVE_INFINITY;
-
-  for (let index = 1; index < route.points.length; index += 1) {
-    const start = route.points[index - 1];
-    const end = route.points[index];
-    const projection = segmentProjection(position, start, end);
-    const projectedPoint = {
-      latitude: projection.projectedLatitude,
-      longitude: projection.projectedLongitude
-    };
-    const distanceToSegment = distanceMeters(position, projectedPoint);
-
-    if (distanceToSegment < shortestDistance) {
-      shortestDistance = distanceToSegment;
-      selectedSegmentIndex = index;
-      selectedProjection = projection;
-    }
-  }
-
-  const previousPoint = route.points[selectedSegmentIndex - 1] ?? route.points[selectedSegmentIndex];
-  const targetPoint = route.points[selectedSegmentIndex];
-  const xteMeters = selectedProjection ? selectedProjection.sign * shortestDistance : 0;
+  const previousPoint = route.points[targetIndex - 1] ?? null;
   const distanceToWaypointMeters = distanceMeters(position, targetPoint);
-
-  let distanceAfterTarget = 0;
-  for (let index = selectedSegmentIndex; index < route.points.length - 1; index += 1) {
-    distanceAfterTarget += distanceMeters(route.points[index], route.points[index + 1]);
+  let remainingDistanceMeters = distanceToWaypointMeters;
+  for (let index = targetIndex; index < route.points.length - 1; index += 1) {
+    remainingDistanceMeters += distanceMeters(route.points[index], route.points[index + 1]);
   }
-
-  const remainingDistanceMeters = distanceToWaypointMeters + distanceAfterTarget;
-  const speedInMps = Number.isFinite(speedMps) ? speedMps : 0;
-  const etaSeconds = speedInMps > 0.2 ? remainingDistanceMeters / speedInMps : null;
-
   return {
     routeName: route.name,
-    xteMeters,
+    xteMeters: previousPoint ? crossTrackMeters(position, previousPoint, targetPoint) : null,
     distanceToWaypointMeters,
     bearingDegrees: bearingBetween(position, targetPoint),
     remainingDistanceMeters,
-    etaText: formatEta(etaSeconds),
-    waypointIndex: selectedSegmentIndex,
+    etaText: formatEta(speedMps > 0.2 ? remainingDistanceMeters / speedMps : null),
+    waypointIndex: targetIndex,
     previousPoint,
     targetPoint
   };

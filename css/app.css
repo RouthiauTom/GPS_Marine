@@ -1014,3 +1014,70 @@ button:disabled {
     font-size: 10px;
   }
 }
+/* Navigation and recording status remain visible outside the collapsible panel. */
+.app-status {
+  position: fixed;
+  z-index: 16;
+  top: max(10px, env(safe-area-inset-top));
+  left: 10px;
+  max-width: calc(100vw - 125px);
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: #e8efec;
+  background: #173d32;
+  font-size: 12px;
+  pointer-events: none;
+}
+#track-status.app-status {
+  top: max(62px, calc(env(safe-area-inset-top) + 52px));
+  color: #fff;
+  font-size: 11px;
+  white-space: normal;
+  background: #243038;
+}
+.gps-unreliable #status { background: #8c3028; }
+.boat.gps-stale { opacity: .45; }
+.boat.course-unknown {
+  width: 18px;
+  height: 18px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #e63946;
+}
+#locate {
+  position: fixed;
+  z-index: 18;
+  right: 12px;
+  bottom: calc(var(--map-control-clearance) + env(safe-area-inset-bottom) + 118px);
+  width: 44px;
+  height: 44px;
+  color: #152522;
+  background: #e8efec;
+  border: 1px solid #52635f;
+  font-size: 28px;
+}
+.navigation-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.navigation-controls[hidden] { display: none; }
+body.sheet-following-route:not(.sheet-expanded) { --map-control-clearance: 180px; }
+.bottom-sheet.collapsed.following-route { height: calc(180px + env(safe-area-inset-bottom)); }
+body.sheet-expanded { --map-control-clearance: 310px; }
+.bottom-sheet.expanded { height: calc(310px + env(safe-area-inset-bottom)); overflow-y: auto; }
+#track-list { padding: 0; list-style: none; display: grid; gap: 16px; }
+#track-list strong { overflow-wrap: anywhere; font-size: 13px; }
+.library-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+@media (max-height: 450px) {
+  .bottom-sheet.expanded { height: 65dvh; }
+}
+
+.route-point-marker.is-navigation-target {
+  background: #ffbe24 !important;
+  color: #152522;
+  border-color: #152522;
+  outline: 3px solid #ffbe24;
+  z-index: 2;
+}

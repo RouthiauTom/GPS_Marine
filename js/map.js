@@ -1,9 +1,10 @@
+import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.14.0/dist/maplibre-gl.mjs';
 import { getWaypointType, WAYPOINT_TYPES } from './waypoint.js?v=1.0.0';
 
 const MIN_MARKER_ZOOM = 12;
 
 export function initializeMap(containerId) {
-  const map = new window.maplibregl.Map({
+  const map = new maplibregl.Map({
     container: containerId,
     style: 'https://tiles.openfreemap.org/styles/liberty',
     center: [-1.7, 49.35],
@@ -11,20 +12,22 @@ export function initializeMap(containerId) {
     attributionControl: false
   });
 
-  map.addControl(new window.maplibregl.NavigationControl(), 'bottom-right');
-  map.addControl(new window.maplibregl.AttributionControl({ compact: false }), 'bottom-left');
+  map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+  map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
 
+  let styleReady = false;
   let boatMarker = null;
   let trackCoordinates = [];
   const waypointMarkers = new Map();
   const routePointMarkers = new Map();
   let routes = [];
   let activeRoute = null;
-  let followingRouteId = null;
+  let navigationRoute = null;
+  let navigationTargetIndex = 0;
 
   function updateMarkerZoomVisibility() {
     const visible = map.getZoom() >= MIN_MARKER_ZOOM;
-    [...waypointMarkers.values(), ...routePointMarkers.values()].forEach(marker => {
+    [...routePointMarkers.values()].forEach(marker => {
       marker.getElement().style.display = visible ? '' : 'none';
     });
   }
@@ -58,7 +61,7 @@ export function initializeMap(containerId) {
   }
 
   function renderTrack() {
-    if (!map.isStyleLoaded()) return;
+    if (!styleReady) return;
 
     if (!map.getSource('gps-track')) {
       map.addSource('gps-track', {
@@ -108,7 +111,7 @@ export function initializeMap(containerId) {
   }
 
   function renderRoutes() {
-    if (!map.isStyleLoaded()) return;
+    if (!styleReady) return;
 
     if (!map.getSource('planned-routes')) {
       map.addSource('planned-routes', {
@@ -151,27 +154,25 @@ export function initializeMap(containerId) {
     element.textContent = isDraft ? String(number) : '';
     element.title = isDraft ? `${name} · point ${number}` : name;
 
-    return new window.maplibregl.Marker({ element, anchor: 'center' })
+    return new maplibregl.Marker({ element, anchor: 'center' })
       .setLngLat([point.longitude, point.latitude])
       .addTo(map);
   }
 
   function renderRoutePoints() {
     const points = [];
-    if (!followingRouteId) {
-      routes.filter(route => route.visible !== false).forEach(route => {
-        route.points.forEach((point, index) => {
-          points.push({
-            key: `${route.id}:${index}`,
-            point,
-            number: index + 1,
-            isDraft: false,
-            name: route.name,
-            color: route.color
-          });
+    routes.filter(route => route.visible !== false).forEach(route => {
+      route.points.forEach((point, index) => {
+        points.push({
+          key: `${route.id}:${index}`,
+          point,
+          number: index + 1,
+          isDraft: false,
+          name: route.name,
+          color: route.color
         });
       });
-    }
+    });
     activeRoute?.points.forEach((point, index) => {
       points.push({
         key: `draft:${index}`,
@@ -219,6 +220,37 @@ export function initializeMap(containerId) {
   function renderRoutesAndPoints() {
     renderRoutes();
     renderRoutePoints();
+    renderNavigationTarget();
+  }
+
+  function renderNavigationTarget() {
+    for (const [key, marker] of routePointMarkers) {
+      const element = marker.getElement();
+      const selected = key === `${navigationRoute?.id}:${navigationTargetIndex}`;
+      element.classList.toggle('is-navigation-target', selected);
+      if (selected) element.textContent = String(navigationTargetIndex + 1);
+      else if (!element.classList.contains('is-draft')) element.textContent = '';
+    }
+    if (!styleReady) return;
+    const target = navigationRoute?.points[navigationTargetIndex];
+    const previous = navigationRoute?.points[navigationTargetIndex - 1];
+    const features = [];
+    if (target) features.push({ type: 'Feature', properties: {},
+      geometry: { type: 'Point', coordinates: [target.longitude, target.latitude] } });
+    if (previous && target) features.push({ type: 'Feature', properties: {},
+      geometry: { type: 'LineString', coordinates: [[previous.longitude, previous.latitude], [target.longitude, target.latitude]] } });
+    const data = { type: 'FeatureCollection', features };
+    if (map.getSource('navigation-target')) {
+      map.getSource('navigation-target').setData(data);
+      return;
+    }
+    map.addSource('navigation-target', { type: 'geojson', data });
+    map.addLayer({ id: 'navigation-leg', type: 'line', source: 'navigation-target',
+      filter: ['==', '$type', 'LineString'],
+      paint: { 'line-color': '#ffbe24', 'line-width': 6, 'line-opacity': 0.8 } });
+    map.addLayer({ id: 'navigation-target-point', type: 'circle', source: 'navigation-target',
+      filter: ['==', '$type', 'Point'],
+      paint: { 'circle-radius': 11, 'circle-color': '#ffbe24', 'circle-stroke-color': '#152522', 'circle-stroke-width': 3 } });
   }
 
   function addOpenSeaMapSeamarks() {
@@ -237,6 +269,7 @@ export function initializeMap(containerId) {
   }
 
   map.on('load', () => {
+    styleReady = true;
     addOpenSeaMapSeamarks();
     renderTrack();
     renderRoutesAndPoints();
@@ -247,7 +280,7 @@ export function initializeMap(containerId) {
     element.className = 'boat';
     element.title = 'Position du bateau';
 
-    return new window.maplibregl.Marker({
+    return new maplibregl.Marker({
       element,
       anchor: 'bottom',
       rotationAlignment: 'map'
@@ -263,7 +296,7 @@ export function initializeMap(containerId) {
     element.append(label);
     element.title = `${type.label} · ${waypoint.name}`;
 
-    return new window.maplibregl.Marker({ element, anchor: 'bottom' })
+    return new maplibregl.Marker({ element, anchor: 'bottom' })
       .setLngLat([waypoint.longitude, waypoint.latitude])
       .addTo(map);
   }
@@ -290,6 +323,17 @@ export function initializeMap(containerId) {
       }
 
       boatMarker.setRotation(Number.isFinite(course) ? course : 0);
+      boatMarker.getElement().classList.toggle('course-unknown', !Number.isFinite(course));
+    },
+
+    setGpsStale(stale) {
+      boatMarker?.getElement().classList.toggle('gps-stale', stale);
+    },
+
+    updateNavigation(route, targetIndex) {
+      navigationRoute = route;
+      navigationTargetIndex = targetIndex;
+      renderNavigationTarget();
     },
 
     updateTrack(track) {
@@ -340,10 +384,9 @@ export function initializeMap(containerId) {
       else map.doubleClickZoom.enable();
     },
 
-    updateRoutes(savedRoutes, draftRoute = null, followedRouteId = null) {
+    updateRoutes(savedRoutes, draftRoute = null) {
       routes = savedRoutes;
       activeRoute = draftRoute;
-      followingRouteId = followedRouteId;
       renderRoutesAndPoints();
     },
 
@@ -359,7 +402,7 @@ export function initializeMap(containerId) {
         return true;
       }
 
-      const bounds = new window.maplibregl.LngLatBounds();
+      const bounds = new maplibregl.LngLatBounds();
       route.points.forEach(point => bounds.extend([point.longitude, point.latitude]));
       map.fitBounds(bounds, {
         padding: { top: 190, right: 40, bottom: 110, left: 40 },

@@ -1,94 +1,83 @@
+import { distanceMeters, bearingBetween } from './navigation.mjs';
+
+export const GPS_MAX_AGE_MS = 15000;
+export const GPS_MAX_ACCURACY_METERS = 50;
 let watchId = null;
 let previousFix = null;
+let motionAnchor = null;
+
+export function isFreshPosition(position, now = Date.now()) {
+  return Boolean(position && Number.isFinite(position.timestamp) &&
+    now - position.timestamp >= -2000 && now - position.timestamp <= GPS_MAX_AGE_MS);
+}
+
+export function isUsablePosition(position, now = Date.now()) {
+  return isFreshPosition(position, now) && Number.isFinite(position.accuracy) &&
+    position.accuracy >= 0 && position.accuracy <= GPS_MAX_ACCURACY_METERS;
+}
 
 export function startWatching(onPosition, onError) {
+  stopWatching();
   if (!navigator.geolocation) {
     onError({ code: 0 });
     return null;
   }
-
-  watchId = navigator.geolocation.watchPosition(
-    position => {
-      const fix = normalizePosition(position, previousFix);
-      previousFix = fix;
-      onPosition(fix);
-    },
-    onError,
-    {
-      enableHighAccuracy: true,
-      maximumAge: 2000,
-      timeout: 15000
+  watchId = navigator.geolocation.watchPosition(position => {
+    const fix = normalizePosition(position, motionAnchor);
+    if (!fix || !isFreshPosition(fix)) {
+      onError({ code: 2 });
+      return;
     }
-  );
-
+    if (previousFix && fix.timestamp <= previousFix.timestamp) return;
+    if (previousFix && distanceMeters(previousFix, fix) >
+      100 * (fix.timestamp - previousFix.timestamp) / 1000 + previousFix.accuracy + fix.accuracy) {
+      onError({ code: 2 });
+      return;
+    }
+    if (isUsablePosition(fix)) {
+      if (!motionAnchor || fix.timestamp - motionAnchor.timestamp > GPS_MAX_AGE_MS ||
+          calculateSpeed(motionAnchor, fix) !== null) motionAnchor = fix;
+      previousFix = fix;
+    }
+    onPosition(fix);
+  }, onError, { enableHighAccuracy: true, maximumAge: 2000, timeout: GPS_MAX_AGE_MS });
   return watchId;
 }
 
 export function stopWatching() {
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-    previousFix = null;
-  }
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null;
+  previousFix = null;
+  motionAnchor = null;
+}
+
+function reliableDisplacement(previous, current) {
+  if (!previous) return false;
+  const elapsed = current.timestamp - previous.timestamp;
+  const uncertainty = Math.max(3, previous.accuracy ?? 0, current.accuracy ?? 0);
+  return elapsed > 0 && elapsed <= GPS_MAX_AGE_MS && distanceMeters(previous, current) > uncertainty;
 }
 
 export function calculateSpeed(previous, current) {
-  if (!previous) return null;
-
-  const elapsedSeconds = (current.timestamp - previous.timestamp) / 1000;
-  if (elapsedSeconds <= 0) return null;
-
-  return distanceMeters(previous, current) / elapsedSeconds;
+  if (!reliableDisplacement(previous, current)) return null;
+  return distanceMeters(previous, current) / ((current.timestamp - previous.timestamp) / 1000);
 }
 
 export function calculateCourse(previous, current) {
-  if (!previous) return null;
-
-  const latitude1 = toRadians(previous.latitude);
-  const latitude2 = toRadians(current.latitude);
-  const longitudeDifference = toRadians(current.longitude - previous.longitude);
-
-  const y = Math.sin(longitudeDifference) * Math.cos(latitude2);
-  const x =
-    Math.cos(latitude1) * Math.sin(latitude2) -
-    Math.sin(latitude1) * Math.cos(latitude2) * Math.cos(longitudeDifference);
-
-  if (x === 0 && y === 0) return null;
-
-  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  return reliableDisplacement(previous, current) ? bearingBetween(previous, current) : null;
 }
 
-function normalizePosition(position, previous) {
+export function normalizePosition(position, previous) {
   const { latitude, longitude, speed, heading, accuracy } = position.coords;
+  if (!Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
+      !Number.isFinite(longitude) || Math.abs(longitude) > 180 ||
+      !Number.isFinite(accuracy) || accuracy < 0) return null;
   const fix = {
-    latitude,
-    longitude,
-    speed: Number.isFinite(speed) ? speed : null,
-    course: Number.isFinite(heading) ? heading : null,
-    accuracy,
-    timestamp: position.timestamp
+    latitude, longitude, accuracy, timestamp: position.timestamp,
+    speed: Number.isFinite(speed) && speed >= 0 ? speed : null,
+    course: Number.isFinite(heading) && heading >= 0 && heading < 360 ? heading : null
   };
-
   if (fix.speed === null) fix.speed = calculateSpeed(previous, fix);
   if (fix.course === null) fix.course = calculateCourse(previous, fix);
-
   return fix;
-}
-
-function distanceMeters(point1, point2) {
-  const latitude1 = toRadians(point1.latitude);
-  const latitude2 = toRadians(point2.latitude);
-  const latitudeDifference = latitude2 - latitude1;
-  const longitudeDifference = toRadians(point2.longitude - point1.longitude);
-
-  const value =
-    Math.sin(latitudeDifference / 2) ** 2 +
-    Math.cos(latitude1) * Math.cos(latitude2) *
-    Math.sin(longitudeDifference / 2) ** 2;
-
-  return 2 * 6371000 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
-}
-
-function toRadians(degrees) {
-  return degrees * Math.PI / 180;
 }
