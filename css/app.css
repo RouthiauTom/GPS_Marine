@@ -1020,7 +1020,7 @@ button:disabled {
   z-index: 16;
   top: max(10px, env(safe-area-inset-top));
   left: 10px;
-  max-width: calc(100vw - 125px);
+  max-width: calc(100vw - 178px);
   padding: 6px 8px;
   border-radius: 7px;
   color: #e8efec;
@@ -1043,18 +1043,6 @@ button:disabled {
   border: 3px solid white;
   border-radius: 50%;
   background: #e63946;
-}
-#locate {
-  position: fixed;
-  z-index: 18;
-  right: 12px;
-  bottom: calc(var(--map-control-clearance) + env(safe-area-inset-bottom) + 118px);
-  width: 44px;
-  height: 44px;
-  color: #152522;
-  background: #e8efec;
-  border: 1px solid #52635f;
-  font-size: 28px;
 }
 .navigation-controls {
   display: grid;

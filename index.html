@@ -10,7 +10,7 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.1.0">
+  <link rel="stylesheet" href="./css/app.css?v=1.1.2">
 </head>
 
 <body>
@@ -20,6 +20,9 @@
   <div id="track-status" class="app-status" role="status" aria-live="polite">Trace arrêtée</div>
 
   <nav class="top-actions" aria-label="Actions principales">
+    <button id="locate" class="track-icon-button" type="button" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3" /></svg>
+    </button>
     <button id="open-gpx" class="gpx-action" aria-label="Importer ou exporter GPX" title="Importer ou exporter GPX">GPX</button>
     <div class="track-control-stack">
       <button id="track-record" class="track-icon-button record-button" type="button" aria-label="Démarrer l'enregistrement" title="Démarrer l'enregistrement" disabled>
@@ -31,7 +34,9 @@
         <button id="track-save" class="track-icon-button" type="button" aria-label="Archiver la sortie" title="Archiver la sortie" hidden disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg>
         </button>
-        <button id="track-to-route" type="button">Créer une route</button>
+        <button id="track-to-route" class="track-icon-button" type="button" aria-label="Créer une route depuis la trace" title="Créer une route depuis la trace" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="3" /><circle cx="18" cy="6" r="3" /><path d="M9 18h6a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6" /></svg>
+        </button>
         <button id="track-clear" class="track-icon-button danger-action" type="button" aria-label="Supprimer la trace" title="Supprimer la trace" hidden disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" /></svg>
         </button>
@@ -92,8 +97,6 @@
       <button id="menu-toggle-routes" type="button">Routes <span id="menu-route-count">0</span></button>
     </div>
   </div>
-
-  <button id="locate" class="locate-action" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">◎</button>
 
   <nav id="map-actions" class="map-actions" aria-label="Actions carte">
     <button id="add-waypoint" class="primary-action" aria-label="Créer un repère nautique" disabled>＋ Repère</button>
