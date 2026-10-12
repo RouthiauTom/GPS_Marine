@@ -834,6 +834,12 @@ button:disabled {
   backdrop-filter: blur(3px);
 }
 
+.map-zone-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.map-zone-actions button { min-height: 44px; }
+.downloaded-maps { list-style: none; padding: 0; }
+.downloaded-maps li { padding: 14px 0; border-bottom: 1px solid #bdccc6; overflow-wrap: anywhere; }
+#map-download-progress { width: 100%; accent-color: #26735e; margin-bottom: 12px; }
+
 .app-dialog p {
   color: #52635f;
   font-size: 13px;

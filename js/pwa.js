@@ -23,7 +23,7 @@ export function initializePwa() {
       clearTimeout(timer);
       channel.port1.close();
       status.textContent = event.data.ready
-        ? 'Application prête hors connexion. Le fond de carte n’est pas téléchargé.'
+        ? 'Application prête hors connexion. Gérez séparément vos cartes téléchargées.'
         : 'Préparation incomplète. Reconnectez-vous avant le départ.';
     };
     worker.postMessage({ type: 'CHECK_OFFLINE' }, [channel.port2]);

@@ -1,5 +1,20 @@
 import * as maplibregl from '../vendor/maplibre-gl/maplibre-gl.mjs';
 import { getWaypointType, WAYPOINT_TYPES } from './waypoint.js?v=1.0.0';
+import { listOfflineMaps, readOfflineTile, offlineMapStyle, containsBounds } from './offline-maps.js';
+
+maplibregl.addProtocol('marine-offline', async request => {
+  const [, id, z, x, y] = request.url.match(/^marine-offline:\/\/([^/]+)\/(\d+)\/(\d+)\/(\d+)$/) || [];
+  if (!id) throw new Error('Adresse de tuile invalide.');
+  return { data: await readOfflineTile(id, z, x, y) };
+});
+maplibregl.addProtocol('marine-glyphs', async (request, controller) => {
+  const range = request.url.match(/\/(\d+-\d+)\.pbf$/)?.[1];
+  // This compact offline style includes Latin names; unsupported scripts are omitted.
+  if (!['0-255', '256-511'].includes(range)) return { data: new ArrayBuffer(0) };
+  const response = await fetch(new URL(`../vendor/fonts/Noto Sans Regular/${range}.pbf`, import.meta.url), { signal: controller.signal });
+  if (!response.ok) throw new Error('Police hors ligne absente.');
+  return { data: await response.arrayBuffer() };
+});
 
 const MIN_MARKER_ZOOM = 12;
 const ONLINE_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
@@ -25,6 +40,9 @@ export function initializeMap(containerId) {
   let onlineStyle = false;
   let styleRequest = null;
   let mapFailed = false;
+  let offlineZone = null;
+  let manualZone = null;
+  let modeGeneration = 0;
   const mapStatus = document.getElementById('map-status');
   const announceMap = message => {
     mapStatus.textContent = message;
@@ -32,18 +50,36 @@ export function initializeMap(containerId) {
   };
   const offlineMessage = 'Hors connexion · sans fond de carte ni balisage. Traces et repères uniquement.';
 
-  function useOfflineMap() {
+  const visibleBounds = () => {
+    const b = map.getBounds();
+    return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  };
+  const announceOffline = () => {
+    if (!offlineZone) { announceMap(offlineMessage); return; }
+    const coverage = containsBounds(offlineZone.bounds, visibleBounds()) ? '' : ' · vue partiellement ou totalement hors zone';
+    announceMap(`Carte locale : ${offlineZone.name} · sans balisage ni profondeurs${coverage}${mapFailed ? ' · données locales incomplètes' : ''}`);
+  };
+  async function useOfflineMap(preferred = null) {
+    const generation = ++modeGeneration;
     styleRequest?.abort();
     styleRequest = null;
     onlineStyle = false;
     mapFailed = false;
     styleReady = false;
-    map.setStyle(emptyStyle(), { diff: false });
-    announceMap(offlineMessage);
+    let zones = [];
+    try { zones = (await listOfflineMaps()).filter(zone => zone.status === 'ready'); } catch { /* retain local overlays */ }
+    if (generation !== modeGeneration) return;
+    const center = map.getCenter();
+    offlineZone = zones.find(zone => zone.id === preferred?.id) ||
+      zones.find(zone => containsBounds(zone.bounds, [center.lng, center.lat, center.lng, center.lat])) || null;
+    map.setStyle(offlineZone ? offlineMapStyle(offlineZone) : emptyStyle(), { diff: false });
+    announceOffline();
   }
 
   async function loadOnlineMap() {
-    if (!navigator.onLine) { announceMap(offlineMessage); return; }
+    if (manualZone) { useOfflineMap(manualZone); return; }
+    if (!navigator.onLine) { useOfflineMap(); return; }
+    ++modeGeneration;
     styleRequest?.abort();
     const controller = new AbortController();
     styleRequest = controller;
@@ -55,22 +91,41 @@ export function initializeMap(containerId) {
       const style = await response.json();
       if (controller !== styleRequest || !navigator.onLine) return;
       onlineStyle = true;
+      offlineZone = null;
       mapFailed = false;
       styleReady = false;
       map.setStyle(style, { diff: false });
     } catch {
       if (controller !== styleRequest) return;
       onlineStyle = false;
-      announceMap('Fond de carte indisponible · traces et repères uniquement.');
+      await useOfflineMap();
+      if (!offlineZone) announceMap('Fond de carte indisponible · traces et repères uniquement.');
     } finally {
       clearTimeout(timeout);
       if (styleRequest === controller) styleRequest = null;
     }
   }
 
-  window.addEventListener('offline', useOfflineMap);
+  window.addEventListener('offline', () => useOfflineMap(manualZone));
   window.addEventListener('online', loadOnlineMap);
+  window.addEventListener('offline-maps-changed', async () => {
+    if (manualZone) {
+      try { if (!(await listOfflineMaps()).some(zone => zone.id === manualZone.id)) manualZone = null; } catch { manualZone = null; }
+    }
+    if (!onlineStyle || manualZone) loadOnlineMap();
+  });
+  map.on('moveend', async () => {
+    if (offlineZone) announceOffline();
+    if (onlineStyle || manualZone) return;
+    try {
+      const center = map.getCenter();
+      const zone = (await listOfflineMaps()).find(zone => zone.status === 'ready' &&
+        containsBounds(zone.bounds, [center.lng, center.lat, center.lng, center.lat]));
+      if (!onlineStyle && !manualZone && zone && zone.id !== offlineZone?.id) useOfflineMap(zone);
+    } catch { /* Map status already explains that the background is unavailable. */ }
+  });
   map.on('error', () => {
+    if (offlineZone) { mapFailed = true; announceOffline(); return; }
     if (!onlineStyle) return;
     mapFailed = true;
     announceMap('Carte ou balisage incomplet · vérifiez la connexion.');
@@ -377,6 +432,13 @@ export function initializeMap(containerId) {
   }
 
   return {
+    getVisibleBounds: visibleBounds,
+    showOfflineRegion(zone) {
+      manualZone = zone;
+      map.fitBounds([[zone.bounds[0], zone.bounds[1]], [zone.bounds[2], zone.bounds[3]]], { padding: 35, duration: 0 });
+      useOfflineMap(zone);
+    },
+    useAutomaticMap() { manualZone = null; loadOnlineMap(); },
     updateBoatPosition(position, course = null) {
       const coordinates = [position.longitude, position.latitude];
 

@@ -1,6 +1,6 @@
 // Bump the release whenever a precached file changes. Updates wait until all
 // existing app windows close; never reload an active navigation session.
-const RELEASE = '1.2.0';
+const RELEASE = '1.3.0';
 const CACHE_PREFIX = `marine-gps-shell-${encodeURIComponent(self.registration.scope)}-`;
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE}`;
 const FILES = [
@@ -8,6 +8,8 @@ const FILES = [
   './js/app.js', './js/map.js', './js/gps.js', './js/navigation.mjs',
   './js/storage.js', './js/track.js', './js/route.js', './js/waypoint.js',
   './js/gpx.js', './js/pwa.js',
+  './js/offline-maps.js', './js/offline-maps-ui.js', './vendor/pmtiles/pmtiles.js', './vendor/pmtiles/fflate.js',
+  './vendor/fonts/Noto Sans Regular/0-255.pbf', './vendor/fonts/Noto Sans Regular/256-511.pbf',
   './vendor/maplibre-gl/maplibre-gl.mjs',
   './vendor/maplibre-gl/maplibre-gl-worker.mjs',
   './vendor/maplibre-gl/maplibre-gl-shared.mjs',
@@ -49,7 +51,7 @@ self.addEventListener('fetch', event => {
   url.hash = '';
   const isHome = url.href === self.registration.scope || url.href === HOME;
   const key = isHome ? HOME : url.href;
-  // No external style, tile or weather caching: this release caches only the app.
+  // Region tiles use separate, user-managed caches through the map protocol.
   if (!FILES.includes(key)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);

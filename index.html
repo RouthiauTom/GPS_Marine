@@ -16,7 +16,7 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.2.0">
+  <link rel="stylesheet" href="./css/app.css?v=1.3.0">
 </head>
 
 <body>
@@ -244,13 +244,43 @@
     </div>
     <p id="offline-status" role="status" aria-live="polite">Préparation de l’application sur cet appareil…</p>
     <p>Sans réseau : GPS, routes, repères, enregistrement des traces et échanges GPX restent disponibles. Le GPS nécessite votre autorisation.</p>
-    <p><strong>Les fonds de carte et le balisage ne sont pas téléchargés.</strong> Sans connexion, seules vos données apparaissent sur un fond neutre.</p>
+    <p>Téléchargez une zone pour afficher un fond de carte simplifié sans réseau. <strong>Le balisage et les profondeurs ne sont pas inclus.</strong></p>
+    <button id="open-offline-maps" class="primary-action" type="button">Cartes hors ligne</button>
     <button id="install-app" class="primary-action" type="button" hidden>Installer l’application</button>
     <p id="install-instructions"></p>
     <p id="offline-update" hidden>Une mise à jour est prête. Elle sera appliquée après fermeture de tous les onglets et fenêtres Marine GPS.</p>
     <p>Avant le départ, attendez « Application prête hors connexion », puis testez une fermeture et une réouverture sans réseau. L’effacement des données du navigateur retire les sauvegardes locales et la préparation hors ligne.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.2.0"></script>
+  <dialog id="maps-dialog" class="app-dialog" aria-labelledby="maps-title">
+    <div class="sheet-heading">
+      <h2 id="maps-title">Cartes hors ligne</h2>
+      <button id="close-maps" class="icon-button" type="button" aria-label="Fermer">×</button>
+    </div>
+    <p>Déplacez et zoomez la carte avant d’ouvrir ce panneau : la zone visible sera téléchargée. Fermez ce panneau pour ajuster la zone.</p>
+    <p id="map-zone-bounds"></p>
+    <label for="map-zone-name">Nom de la zone</label>
+    <input id="map-zone-name" maxlength="80" value="Ma zone de navigation">
+    <label for="map-detail">Niveau de détail</label>
+    <select id="map-detail">
+      <option value="10">Vue générale (zoom 10)</option>
+      <option value="12" selected>Côtes (zoom 12)</option>
+      <option value="14">Détaillé (zoom 14, petite zone)</option>
+    </select>
+    <p id="maps-status" role="status" aria-live="polite"></p>
+    <progress id="map-download-progress" aria-label="Téléchargement de la carte" max="1" value="0" hidden></progress>
+    <div class="map-zone-actions">
+      <button id="download-map" class="primary-action" type="button">Télécharger la zone</button>
+      <button id="cancel-map-download" type="button" hidden>Annuler</button>
+    </div>
+    <h3>Sur cet appareil</h3>
+    <ul id="downloaded-maps" class="downloaded-maps"></ul>
+    <p id="maps-storage"></p>
+    <button id="use-online-map" type="button">Revenir au fond automatique</button>
+    <p>Fond simplifié Protomaps / OpenStreetMap : côtes, voies, bâtiments et noms latins. Sans balisage, sondes ni marées. La date de la source est indiquée pour chaque zone. Le contour vert marque la zone préparée.</p>
+    <p>Conservez cette page ouverte pendant le téléchargement. Testez la zone en mode avion avant le départ. Le navigateur peut effacer les cartes en cas de manque de place ; vos exports GPX restent indispensables.</p>
+  </dialog>
+
+  <script type="module" src="./js/app.js?v=1.3.0"></script>
 </body>
 </html>

@@ -28,10 +28,11 @@ uniquement pour les tests, pas pour utiliser ou héberger l'application.
 5. Couper le réseau, fermer puis rouvrir l’application pour vérifier la préparation.
 
 Sans réseau, la position GPS (avec autorisation), les repères, les routes, les traces,
-le stockage et les échanges GPX restent utilisables. Un **fond neutre** remplace la
-carte, avec un message explicite : aucune côte, profondeur ou balise n’est garantie
-hors connexion. Les couches locales restent fonctionnelles même si le serveur de
-cartes est indisponible. La reconnexion demande à nouveau la carte en ligne.
+le stockage et les échanges GPX restent utilisables. Une zone téléchargée couvrant
+le centre de la carte est affichée automatiquement ; sans zone disponible, un
+**fond neutre** remplace la carte. Les couches locales restent fonctionnelles même
+si le serveur de cartes est indisponible. La reconnexion rétablit la carte en ligne,
+sauf si une carte locale a été explicitement choisie avec **Afficher**.
 
 L’installation ne garantit pas l’enregistrement écran verrouillé. Le navigateur
 peut suspendre l’application en arrière-plan. Effacer les données du site supprime
@@ -40,6 +41,52 @@ peut suspendre l’application en arrière-plan. Effacer les données du site su
 Une mise à jour complète est préparée séparément puis attend la fermeture de tous
 les onglets/fenêtres Marine GPS. Aucun rechargement automatique n’interrompt une
 sortie. Les données IndexedDB ne sont pas effacées lors des mises à jour.
+
+### Télécharger des zones gratuites
+
+1. Déplacer et zoomer la carte sur la zone souhaitée.
+2. Ouvrir **Installation / hors ligne → Cartes hors ligne**.
+3. Nommer la zone, choisir le détail et consulter l’estimation indicative.
+4. Lancer **Télécharger la zone** et garder l’application au premier plan.
+5. Utiliser **Afficher**, puis tester une réouverture en mode avion.
+
+Le téléchargement prépare tous les niveaux de zoom de 0 au niveau choisi (10, 12
+ou 14), avec un plafond de 600 tuiles et 100 Mo stockés par zone. Au-delà, réduire la
+zone ou le détail. L’estimation utilise 50 ko par tuile : la taille réelle varie
+avec la densité des données. Le zoom reste possible au-delà du détail préparé,
+sans ajouter de précision. Le contour vert délimite la zone et un message signale
+une vue qui déborde. Les zones traversant le méridien ±180° ou les pôles ne sont
+pas prises en charge : préparer des zones distinctes de chaque côté.
+
+Le fond simplifié contient côtes, voies, bâtiments et noms latins (glyphes 0–511).
+**Ni balisage OpenSeaMap, ni profondeurs, ni marées ne sont téléchargés.** La date
+de la source apparaît dans la liste ; elle peut être ancienne. Il n’y a pas de
+mise à jour automatique : télécharger une nouvelle zone puis supprimer l’ancienne.
+Les cartes locales sont des fonds de repérage, pas des cartes nautiques officielles.
+
+La source est l’archive Protomaps v4 sur Source Cooperative. Les [extractions
+régionales sont documentées par Protomaps](https://docs.protomaps.com/basemaps/downloads)
+et par [le dépôt du fournisseur](https://source.coop/protomaps/openstreetmap).
+L’application extrait uniquement les tuiles demandées, sans utiliser cette archive
+pour la navigation en ligne. Elle exige les réponses HTTP partielles et un ETag
+stable pour ne jamais télécharger le fichier planète entier ni mélanger deux
+versions. Le miroir v4 consulté le 12 octobre 2026 indiquait une dernière modification
+au 31 mars 2026 ; la date OSM des métadonnées est privilégiée à l’affichage.
+Les [conditions OpenFreeMap](https://openfreemap.org/tos/) ne permettent pas de
+présumer une autorisation de collecte automatisée : aucun téléchargement massif
+OpenFreeMap ou OpenSeaMap n’est donc ajouté.
+
+Chaque zone possède son propre cache, indépendant des mises à jour de l’application.
+Une zone n’est déclarée prête qu’après l’écriture de toutes les tuiles. Annulation
+et erreur effacent l’ajout partiel ; une fermeture forcée laisse éventuellement une
+entrée « téléchargement incomplet » à supprimer. **Supprimer** libère seulement
+la carte choisie, sans retirer routes, repères ni traces. Le navigateur peut refuser
+le stockage ou l’effacer : vérifier avant chaque départ et conserver les exports GPX.
+
+Bibliothèques locales : PMTiles 4.5.0 (BSD-3-Clause), fflate (MIT), glyphes Noto Sans
+issus de [Protomaps basemaps-assets](https://github.com/protomaps/basemaps-assets)
+(SIL OFL). Les licences sont conservées dans `vendor/`. L’import ESM de fflate dans
+PMTiles est adapté au chemin local ; aucune dépendance CDN n’est nécessaire hors ligne.
 
 ## Navigation
 
