@@ -1,15 +1,9 @@
 import { test, expect } from '@playwright/test';
-import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 const errors = new WeakMap();
 test.beforeEach(async ({ page }) => {
   errors.set(page, []);
   page.on('pageerror', error => errors.get(page).push(error.message));
-  await page.route('https://unpkg.com/maplibre-gl@*/dist/*', route => route.fulfill({
-    headers: { 'Access-Control-Allow-Origin': '*' },
-    contentType: route.request().url().endsWith('.css') ? 'text/css' : 'text/javascript',
-    path: path.resolve('node_modules/maplibre-gl/dist', new URL(route.request().url()).pathname.split('/').at(-1))
-  }));
   await page.route('https://tiles.openfreemap.org/**', route => route.fulfill({ json: {
     version: 8, sources: {}, layers: [{ id: 'sea', type: 'background', paint: { 'background-color': '#b4d3df' } }]
   } }));

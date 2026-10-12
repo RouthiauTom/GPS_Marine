@@ -1,6 +1,7 @@
+import { initializePwa } from './pwa.js';
 import { startWatching, isFreshPosition, isUsablePosition } from './gps.js';
 import { computeRouteNavigation, advanceNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js?v=1.1.0';
+import { initializeMap } from './map.js?v=1.2.0';
 import {
   addTrackPoint,
   clearTrack,
@@ -1147,3 +1148,4 @@ initializeTrack();
 initializeWaypoints();
 initializeRoutes();
 startWatching(updateInterface, showGpsError);
+initializePwa();

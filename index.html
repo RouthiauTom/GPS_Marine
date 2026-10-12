@@ -3,18 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Marine GPS V1.1</title>
+  <meta name="theme-color" content="#152522">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Marine GPS">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/app.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <title>Marine GPS V1.2</title>
 
   <link
-    href="https://unpkg.com/maplibre-gl@6.14.0/dist/maplibre-gl.css"
+    href="./vendor/maplibre-gl/maplibre-gl.css"
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.1.2">
+  <link rel="stylesheet" href="./css/app.css?v=1.2.0">
 </head>
 
 <body>
   <div id="map"></div>
+  <div id="map-status" role="status" aria-live="polite">Chargement du fond de carte…</div>
 
   <div id="status" class="app-status" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
   <div id="track-status" class="app-status" role="status" aria-live="polite">Trace arrêtée</div>
@@ -91,6 +98,7 @@
 
     <div class="bottom-sheet-actions">
       <button id="menu-add-waypoint" class="primary-action" type="button">＋ Créer un repère nautique</button>
+      <button id="menu-offline" type="button">Installation / hors ligne</button>
       <button id="menu-tracks" type="button">Sorties enregistrées</button>
       <button id="menu-start-route" type="button">Créer une route</button>
       <button id="menu-toggle-waypoints" type="button">Waypoints <span id="menu-waypoint-count">0</span></button>
@@ -229,6 +237,20 @@
     <p>Utilisez le menu GPX pour exporter vos sorties.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.1.0"></script>
+  <dialog id="offline-dialog" class="app-dialog" aria-labelledby="offline-title">
+    <div class="sheet-heading">
+      <h2 id="offline-title">Installation et hors ligne</h2>
+      <button id="close-offline" class="icon-button" type="button" aria-label="Fermer">×</button>
+    </div>
+    <p id="offline-status" role="status" aria-live="polite">Préparation de l’application sur cet appareil…</p>
+    <p>Sans réseau : GPS, routes, repères, enregistrement des traces et échanges GPX restent disponibles. Le GPS nécessite votre autorisation.</p>
+    <p><strong>Les fonds de carte et le balisage ne sont pas téléchargés.</strong> Sans connexion, seules vos données apparaissent sur un fond neutre.</p>
+    <button id="install-app" class="primary-action" type="button" hidden>Installer l’application</button>
+    <p id="install-instructions"></p>
+    <p id="offline-update" hidden>Une mise à jour est prête. Elle sera appliquée après fermeture de tous les onglets et fenêtres Marine GPS.</p>
+    <p>Avant le départ, attendez « Application prête hors connexion », puis testez une fermeture et une réouverture sans réseau. L’effacement des données du navigateur retire les sauvegardes locales et la préparation hors ligne.</p>
+  </dialog>
+
+  <script type="module" src="./js/app.js?v=1.2.0"></script>
 </body>
 </html>

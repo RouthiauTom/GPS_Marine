@@ -1,12 +1,18 @@
-import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.14.0/dist/maplibre-gl.mjs';
+import * as maplibregl from '../vendor/maplibre-gl/maplibre-gl.mjs';
 import { getWaypointType, WAYPOINT_TYPES } from './waypoint.js?v=1.0.0';
 
 const MIN_MARKER_ZOOM = 12;
+const ONLINE_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const emptyStyle = () => ({
+  version: 8,
+  sources: {},
+  layers: [{ id: 'offline-background', type: 'background', paint: { 'background-color': '#e2e5e4' } }]
+});
 
 export function initializeMap(containerId) {
   const map = new maplibregl.Map({
     container: containerId,
-    style: 'https://tiles.openfreemap.org/styles/liberty',
+    style: emptyStyle(),
     center: [-1.7, 49.35],
     zoom: 9,
     attributionControl: false
@@ -16,6 +22,62 @@ export function initializeMap(containerId) {
   map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
 
   let styleReady = false;
+  let onlineStyle = false;
+  let styleRequest = null;
+  let mapFailed = false;
+  const mapStatus = document.getElementById('map-status');
+  const announceMap = message => {
+    mapStatus.textContent = message;
+    mapStatus.hidden = !message;
+  };
+  const offlineMessage = 'Hors connexion · sans fond de carte ni balisage. Traces et repères uniquement.';
+
+  function useOfflineMap() {
+    styleRequest?.abort();
+    styleRequest = null;
+    onlineStyle = false;
+    mapFailed = false;
+    styleReady = false;
+    map.setStyle(emptyStyle(), { diff: false });
+    announceMap(offlineMessage);
+  }
+
+  async function loadOnlineMap() {
+    if (!navigator.onLine) { announceMap(offlineMessage); return; }
+    styleRequest?.abort();
+    const controller = new AbortController();
+    styleRequest = controller;
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    announceMap('Chargement du fond de carte…');
+    try {
+      const response = await fetch(ONLINE_STYLE_URL, { signal: controller.signal });
+      if (!response.ok) throw new Error('Style unavailable');
+      const style = await response.json();
+      if (controller !== styleRequest || !navigator.onLine) return;
+      onlineStyle = true;
+      mapFailed = false;
+      styleReady = false;
+      map.setStyle(style, { diff: false });
+    } catch {
+      if (controller !== styleRequest) return;
+      onlineStyle = false;
+      announceMap('Fond de carte indisponible · traces et repères uniquement.');
+    } finally {
+      clearTimeout(timeout);
+      if (styleRequest === controller) styleRequest = null;
+    }
+  }
+
+  window.addEventListener('offline', useOfflineMap);
+  window.addEventListener('online', loadOnlineMap);
+  map.on('error', () => {
+    if (!onlineStyle) return;
+    mapFailed = true;
+    announceMap('Carte ou balisage incomplet · vérifiez la connexion.');
+  });
+  map.on('idle', () => {
+    if (onlineStyle && !mapFailed) announceMap('');
+  });
   let boatMarker = null;
   let trackCoordinates = [];
   const waypointMarkers = new Map();
@@ -268,12 +330,15 @@ export function initializeMap(containerId) {
     });
   }
 
-  map.on('load', () => {
+  map.on('style.load', () => {
     styleReady = true;
-    addOpenSeaMapSeamarks();
+    if (onlineStyle) addOpenSeaMapSeamarks();
     renderTrack();
     renderRoutesAndPoints();
   });
+
+  // Start independently of remote tiles so local overlays always work.
+  loadOnlineMap();
 
   function createBoatMarker() {
     const element = document.createElement('div');

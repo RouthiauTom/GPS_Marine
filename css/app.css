@@ -1069,3 +1069,18 @@ body.sheet-expanded { --map-control-clearance: 310px; }
   outline: 3px solid #ffbe24;
   z-index: 2;
 }
+
+#map-status {
+  position: fixed;
+  z-index: 14;
+  top: max(116px, calc(env(safe-area-inset-top) + 106px));
+  left: 10px;
+  max-width: calc(100vw - 84px);
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fff0cc;
+  color: #573b07;
+  font-size: 12px;
+  pointer-events: none;
+}
+#map-status[hidden], #install-app[hidden], #offline-update[hidden] { display: none; }
