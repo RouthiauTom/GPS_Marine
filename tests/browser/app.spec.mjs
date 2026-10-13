@@ -131,3 +131,95 @@ test('pause/resume splits trace and prevents conversion across missing sections'
   const tracks = await page.evaluate(async () => (await import('/js/storage.js')).loadTracks());
   expect(tracks[0].points.map(p => p.segment)).toEqual([0, 1]);
 });
+
+async function followTestRoute(page) {
+  await page.evaluate(async () => {
+    const storage = await import('/js/storage.js');
+    await storage.saveRoute({ id: 'test-guidance', name: 'Essai guidage', createdAt: 1, visible: true,
+      points: [{ latitude: 49.35, longitude: -1.7 }, { latitude: 49.35, longitude: -1.68 }, { latitude: 49.36, longitude: -1.68 }] });
+  });
+  await page.reload();
+  await expect(page.locator('#track-record')).toBeEnabled();
+  await expand(page); await page.locator('#menu-toggle-routes').click();
+  await page.getByRole('button', { name: 'Suivre', exact: true }).click();
+  await page.locator('#close-routes').click();
+}
+
+test('simulation exercises the deviation alert without recording and restores live GPS', async ({ page }) => {
+  await followTestRoute(page);
+  await page.locator('#track-record').click();
+  await fix(page);
+  await page.locator('#navigation-settings').click();
+  await expect(page.locator('#simulation-start')).toBeDisabled();
+  await page.locator('#close-navigation-settings').click();
+  await page.locator('#track-record').click();
+  const pointsBefore = await page.evaluate(async () => (await import('/js/track.js')).getCurrentTrack().points);
+  await page.evaluate(() => { window.oldGpsSuccess = window.gpsSuccess; });
+  await page.clock.install();
+  await page.locator('#navigation-settings').click();
+  await page.locator('#simulation-offset').selectOption('300');
+  await page.locator('#simulation-start').click();
+  await expect(page.locator('#status')).toContainText('SIMULATION');
+  await expect(page.locator('#track-record')).toBeDisabled();
+  await page.clock.runFor(5000);
+  await expect(page.locator('#navigation-alert')).toContainText('TEST · Écart de route');
+  await expect(page.locator('#navigation-alert')).toHaveClass('is-alert');
+  await page.evaluate(() => window.oldGpsSuccess({ coords: { latitude: 0, longitude: 0, accuracy: 5, speed: 0, heading: 0 }, timestamp: Date.now() }));
+  await expect(page.locator('#status')).toContainText('SIMULATION');
+  await page.screenshot({ path: 'test-results/simulation-mobile.png' });
+  await page.locator('#navigation-settings').click();
+  await page.locator('#simulation-offset').selectOption('0');
+  await page.locator('#close-navigation-settings').click();
+  await page.clock.runFor(1000);
+  await expect(page.locator('#navigation-alert')).not.toHaveClass('is-alert');
+  const pointsAfter = await page.evaluate(async () => (await import('/js/track.js')).getCurrentTrack().points);
+  expect(pointsAfter).toEqual(pointsBefore);
+  await page.locator('#simulation-exit').click();
+  await expect(page.locator('#status')).toContainText('attente de position');
+  await expect(page.locator('.boat')).toHaveCount(0);
+  await expect(page.locator('#track-record')).toBeEnabled();
+  await fix(page);
+  await expect(page.locator('#status')).toContainText('GPS actif');
+  await expect(page.locator('#navigation-route-name')).toContainText('Point 2/3');
+});
+
+test('deviation threshold persists and GPS expiry suspends the alert', async ({ page }) => {
+  await followTestRoute(page);
+  await page.locator('#navigation-settings').click();
+  await page.locator('#deviation-threshold').selectOption('50');
+  await page.locator('#close-navigation-settings').click();
+  await page.clock.install();
+  await fix(page);
+  for (let i = 0; i < 5; i++) {
+    await page.clock.runFor(1000);
+    await page.evaluate(() => window.gpsSuccess({ coords: {
+      latitude: 49.351, longitude: -1.699, accuracy: 5, speed: 2, heading: 90
+    }, timestamp: Date.now() }));
+  }
+  await expect(page.locator('#navigation-alert')).toHaveClass('is-alert');
+  await page.clock.fastForward(16000);
+  await expect(page.locator('#navigation-alert')).toContainText('suspendue');
+  await expect(page.locator('#navigation-alert')).not.toHaveClass('is-alert');
+  await page.reload();
+  await expand(page); await page.locator('#menu-toggle-routes').click();
+  await page.getByRole('button', { name: 'Suivre', exact: true }).click();
+  await page.locator('#close-routes').click();
+  await page.locator('#navigation-settings').click();
+  await expect(page.locator('#deviation-threshold')).toHaveValue('50');
+});
+
+test('an offline simulation reaches the final target and Terminer exits simulation', async ({ context, page }) => {
+  await followTestRoute(page);
+  await context.setOffline(true);
+  await page.clock.install();
+  await page.locator('#navigation-settings').click();
+  await page.locator('#simulation-speed').selectOption('200');
+  await page.locator('#simulation-start').click();
+  await page.clock.runFor(20000);
+  await expect(page.locator('#navigation-route-name')).toContainText('Arrivée atteinte');
+  await expect(page.locator('#status')).toContainText('SIMULATION · parcours terminé');
+  await page.locator('#navigation-stop').click();
+  await expect(page.locator('#simulation-exit')).toBeHidden();
+  await expect(page.locator('#navigation-controls')).toBeHidden();
+  await expect(page.locator('#status')).not.toContainText('SIMULATION');
+});

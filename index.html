@@ -16,7 +16,7 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.3.0">
+  <link rel="stylesheet" href="./css/app.css?v=1.4.0">
 </head>
 
 <body>
@@ -25,6 +25,7 @@
 
   <div id="status" class="app-status" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
   <div id="track-status" class="app-status" role="status" aria-live="polite">Trace arrêtée</div>
+  <button id="simulation-exit" type="button" hidden>Quitter la simulation</button>
 
   <nav class="top-actions" aria-label="Actions principales">
     <button id="locate" class="track-icon-button" type="button" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">
@@ -70,6 +71,7 @@
     </div>
 
     <div id="navigation-route-name" class="navigation-route-name" hidden></div>
+    <div id="navigation-alert" role="status" aria-live="polite" hidden></div>
 
     <div id="navigation-instruments" class="instruments navigation-instruments" aria-label="Navigation active" hidden>
       <div class="instrument">
@@ -94,6 +96,7 @@
       <button id="navigation-previous" type="button">← Précédent</button>
       <button id="navigation-next" type="button">Suivant →</button>
       <button id="navigation-stop" type="button">Terminer</button>
+      <button id="navigation-settings" type="button">Réglages</button>
     </div>
 
     <div class="bottom-sheet-actions">
@@ -252,6 +255,24 @@
     <p>Avant le départ, attendez « Application prête hors connexion », puis testez une fermeture et une réouverture sans réseau. L’effacement des données du navigateur retire les sauvegardes locales et la préparation hors ligne.</p>
   </dialog>
 
+  <dialog id="navigation-dialog" class="app-dialog" aria-labelledby="navigation-settings-title">
+    <div class="sheet-heading">
+      <h2 id="navigation-settings-title">Guidage et simulation</h2>
+      <button id="close-navigation-settings" class="icon-button" type="button" aria-label="Fermer">×</button>
+    </div>
+    <label for="deviation-threshold">Alerte visuelle d’écart de route</label>
+    <select id="deviation-threshold"><option value="50">50 m</option><option value="100" selected>100 m</option><option value="200">200 m</option><option value="500">500 m</option></select>
+    <p>Déclenchement après 3 secondes de positions fiables au-delà du seuil, en tenant compte de la précision GPS. Surveillance à partir du deuxième point. Aucune alerte sonore ou en arrière-plan.</p>
+    <h3>Simulation</h3>
+    <p id="simulation-message" role="status"></p>
+    <label for="simulation-speed">Vitesse de parcours fictive</label>
+    <select id="simulation-speed"><option value="5">5 m/s (environ 10 nœuds)</option><option value="50" selected>50 m/s (accéléré)</option><option value="200">200 m/s (très accéléré)</option></select>
+    <label for="simulation-offset">Écart fictif à bâbord</label>
+    <select id="simulation-offset"><option value="0">Sur la route</option><option value="100">100 m</option><option value="300">300 m</option><option value="700">700 m</option></select>
+    <p>Revenez sur la route pour atteindre les points. La simulation se met en pause lorsque la page est masquée. Quitter rétablit le point cible initial et attend un nouveau signal GPS.</p>
+    <button id="simulation-start" class="primary-action" type="button">Démarrer la simulation</button>
+  </dialog>
+
   <dialog id="maps-dialog" class="app-dialog" aria-labelledby="maps-title">
     <div class="sheet-heading">
       <h2 id="maps-title">Cartes hors ligne</h2>
@@ -281,6 +302,6 @@
     <p>Conservez cette page ouverte pendant le téléchargement. Testez la zone en mode avion avant le départ. Le navigateur peut effacer les cartes en cas de manque de place ; vos exports GPX restent indispensables.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.3.0"></script>
+  <script type="module" src="./js/app.js?v=1.4.0"></script>
 </body>
 </html>

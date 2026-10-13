@@ -5,6 +5,7 @@ export const GPS_MAX_ACCURACY_METERS = 50;
 let watchId = null;
 let previousFix = null;
 let motionAnchor = null;
+let watchGeneration = 0;
 
 export function isFreshPosition(position, now = Date.now()) {
   return Boolean(position && Number.isFinite(position.timestamp) &&
@@ -18,11 +19,13 @@ export function isUsablePosition(position, now = Date.now()) {
 
 export function startWatching(onPosition, onError) {
   stopWatching();
+  const generation = watchGeneration;
   if (!navigator.geolocation) {
     onError({ code: 0 });
     return null;
   }
   watchId = navigator.geolocation.watchPosition(position => {
+    if (generation !== watchGeneration) return;
     const fix = normalizePosition(position, motionAnchor);
     if (!fix || !isFreshPosition(fix)) {
       onError({ code: 2 });
@@ -40,11 +43,12 @@ export function startWatching(onPosition, onError) {
       previousFix = fix;
     }
     onPosition(fix);
-  }, onError, { enableHighAccuracy: true, maximumAge: 2000, timeout: GPS_MAX_AGE_MS });
+  }, error => { if (generation === watchGeneration) onError(error); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: GPS_MAX_AGE_MS });
   return watchId;
 }
 
 export function stopWatching() {
+  watchGeneration++;
   if (watchId !== null) navigator.geolocation.clearWatch(watchId);
   watchId = null;
   previousFix = null;

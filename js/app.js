@@ -1,8 +1,9 @@
+import { updateDeviation, createSimulator } from './navigation-tools.mjs';
 import { initializePwa } from './pwa.js';
 import { initializeOfflineMaps } from './offline-maps-ui.js';
-import { startWatching, isFreshPosition, isUsablePosition } from './gps.js';
+import { startWatching, stopWatching, isFreshPosition, isUsablePosition } from './gps.js';
 import { computeRouteNavigation, advanceNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js?v=1.3.0';
+import { initializeMap } from './map.js?v=1.4.0';
 import {
   addTrackPoint,
   clearTrack,
@@ -54,6 +55,16 @@ const MIN_COG_SPEED = 0.5;
 let activeNavigationRouteId = null;
 let navigationState = { targetIndex: 0, completed: false };
 let gpsError = '';
+let simulation = null;
+let gpsSession = 0;
+let deviation = { active: false };
+const thresholdKey = `marine-gps-xte:${new URL('../', import.meta.url).pathname}`;
+let deviationThreshold = 100;
+try {
+  const saved = Number(localStorage.getItem(thresholdKey));
+  if ([50, 100, 200, 500].includes(saved)) deviationThreshold = saved;
+} catch { /* Session settings still work without storage. */ }
+
 let trackBusy = false;
 let trackSaveQueue = Promise.resolve(true);
 let lastTrackSave = 0;
@@ -88,7 +99,7 @@ function updateTrackControls() {
   const clearButton = getElement('track-clear');
   const finalizeActions = getElement('track-finalize-actions');
 
-  recordButton.disabled = !trackStorageInitialized || trackBusy;
+  recordButton.disabled = !trackStorageInitialized || trackBusy || Boolean(simulation);
   recordButton.classList.toggle('is-recording', recording);
   recordButton.classList.toggle('is-paused', Boolean(track) && !recording);
   recordButton.setAttribute(
@@ -266,6 +277,8 @@ function renderNavigation() {
   getElement('navigation-controls').hidden = !route;
   getElement('navigation-previous').disabled = navigationState.targetIndex === 0;
   getElement('navigation-next').disabled = !route || navigationState.targetIndex >= route.points.length - 1;
+  getElement('navigation-previous').disabled ||= Boolean(simulation);
+  getElement('navigation-next').disabled ||= Boolean(simulation);
   map.updateNavigation(route, navigationState.targetIndex);
   setNavigationTitle(route);
 
@@ -274,6 +287,7 @@ function renderNavigation() {
     if (element) element.textContent = value;
   };
 
+  renderDeviation(route);
   if (!route || !isUsablePosition(latestPosition) || gpsError || navigationState.completed) {
     setValue('xte', '—');
     setValue('dtw', '—');
@@ -333,6 +347,7 @@ function renderRoutes() {
     followButton.textContent = activeNavigationRouteId === route.id ? 'Arrêter' : 'Suivre';
     followButton.classList.toggle('primary-action', activeNavigationRouteId === route.id);
     followButton.addEventListener('click', () => {
+      if (simulation) stopSimulation();
       activeNavigationRouteId = activeNavigationRouteId === route.id ? null : route.id;
       navigationState = { targetIndex: 0, completed: false };
       if (activeNavigationRouteId) {
@@ -640,7 +655,7 @@ function updateInterface(position) {
   updateGpsHealth();
   renderNavigation();
 
-  if (isTracking() && isUsablePosition(position)) {
+  if (!simulation && isTracking() && isUsablePosition(position)) {
     const track = addTrackPoint(position);
     if (Date.now() - lastTrackRender >= 2000) {
       map.updateTrack(track);
@@ -670,6 +685,12 @@ function showGpsError(error) {
 }
 
 function updateGpsHealth() {
+  if (simulation) {
+    getElement('status').textContent = simulation.done ? 'SIMULATION · parcours terminé' : 'SIMULATION · position fictive';
+    document.body.classList.remove('gps-unreliable');
+    map.setGpsStale(false);
+    return;
+  }
   const fresh = isFreshPosition(latestPosition);
   const usable = isUsablePosition(latestPosition) && !gpsError;
   document.body.classList.toggle('gps-unreliable', !usable);
@@ -684,7 +705,7 @@ function updateGpsHealth() {
   }
 }
 
-setInterval(updateGpsHealth, 1000);
+setInterval(() => { updateGpsHealth(); renderNavigation(); }, 1000);
 document.addEventListener('visibilitychange', () => {
   updateGpsHealth();
   if (document.hidden && !trackBusy) persistTrack(getCurrentTrack());
@@ -701,6 +722,7 @@ getElement('navigation-next').addEventListener('click', () => {
   renderNavigation();
 });
 getElement('navigation-stop').addEventListener('click', () => {
+  if (simulation) stopSimulation();
   activeNavigationRouteId = null;
   renderRoutes();
 });
@@ -1079,6 +1101,7 @@ getElement('delete-route-dialog').addEventListener('close', async event => {
 
   const routeId = routePendingDeletion;
   routePendingDeletion = null;
+  if (simulation && activeNavigationRouteId === routeId) stopSimulation();
   removeRoute(routeId);
   if (activeNavigationRouteId === routeId) activeNavigationRouteId = null;
   renderRoutes();
@@ -1148,6 +1171,89 @@ updateRouteControls();
 initializeTrack();
 initializeWaypoints();
 initializeRoutes();
-startWatching(updateInterface, showGpsError);
+startRealGps();
 initializePwa();
 initializeOfflineMaps(map);
+
+function startRealGps() {
+  const session = ++gpsSession;
+  startWatching(position => { if (session === gpsSession && !simulation) updateInterface(position); },
+    error => { if (session === gpsSession && !simulation) showGpsError(error); });
+}
+
+function renderDeviation(route) {
+  const usable = Boolean(route && !navigationState.completed && !gpsError && isUsablePosition(latestPosition));
+  const metrics = usable ? computeRouteNavigation(route, latestPosition, 0, navigationState.targetIndex) : null;
+  deviation = updateDeviation(deviation, { xte: metrics?.xteMeters, accuracy: latestPosition?.accuracy,
+    timestamp: latestPosition?.timestamp, threshold: deviationThreshold, usable,
+    leg: `${route?.id}:${navigationState.targetIndex}` });
+  const message = getElement('navigation-alert');
+  message.hidden = !route;
+  message.classList.toggle('is-alert', deviation.active);
+  message.textContent = !route ? '' : navigationState.completed ? 'Arrivée atteinte' :
+    !usable ? 'Alerte d’écart suspendue · position indisponible ou imprécise' :
+    metrics.xteMeters === null ? 'Rejoignez le premier point pour surveiller l’écart' :
+    deviation.active ? `${simulation ? 'TEST · ' : ''}Écart de route : ${Math.round(Math.abs(metrics.xteMeters))} m · ${metrics.xteMeters > 0 ? 'bâbord' : 'tribord'}` :
+    `Surveillance d’écart · seuil ${deviationThreshold} m`;
+}
+
+function stopSimulation() {
+  if (!simulation) return;
+  clearInterval(simulation.timer);
+  navigationState = simulation.savedState;
+  simulation = null;
+  latestPosition = null;
+  gpsError = '';
+  firstFix = true;
+  deviation = { active: false };
+  document.body.classList.remove('simulating');
+  getElement('simulation-exit').hidden = true;
+  getElement('simulation-start').disabled = false;
+  getElement('simulation-message').textContent = 'Simulation arrêtée. Attente d’une nouvelle position GPS réelle.';
+  ['accuracy', 'speed-bottom', 'course'].forEach(id => { getElement(id).textContent = '—'; });
+  map.clearBoat();
+  updateTrackControls();
+  updateGpsHealth();
+  renderNavigation();
+  startRealGps();
+}
+
+getElement('navigation-settings').addEventListener('click', () => {
+  getElement('deviation-threshold').value = String(deviationThreshold);
+  getElement('simulation-start').disabled = Boolean(simulation) || isTracking() || trackBusy;
+  getElement('simulation-message').textContent = simulation ? 'Simulation en cours. Modifiez l’écart pour tester l’alerte.' :
+    isTracking() || trackBusy ? 'Mettez l’enregistrement en pause avant de simuler.' : 'Parcourt la route depuis son premier point, sans enregistrer de trace.';
+  getElement('navigation-dialog').showModal();
+});
+getElement('close-navigation-settings').addEventListener('click', () => getElement('navigation-dialog').close());
+getElement('deviation-threshold').addEventListener('change', event => {
+  deviationThreshold = Number(event.target.value);
+  deviation = { active: false };
+  try { localStorage.setItem(thresholdKey, String(deviationThreshold)); } catch { /* Session only. */ }
+  renderNavigation();
+});
+getElement('simulation-exit').addEventListener('click', stopSimulation);
+getElement('simulation-start').addEventListener('click', () => {
+  const route = getRoutes().find(item => item.id === activeNavigationRouteId);
+  if (!route?.points.length || simulation || isTracking() || trackBusy) return;
+  ++gpsSession;
+  stopWatching();
+  simulation = { engine: createSimulator(route.points), savedState: { ...navigationState }, timer: null, done: false };
+  navigationState = { targetIndex: 0, completed: false };
+  deviation = { active: false };
+  document.body.classList.add('simulating');
+  getElement('simulation-exit').hidden = false;
+  firstFix = false;
+  map.centerOnRoute(route);
+  updateTrackControls();
+  updateInterface({ ...route.points[0], accuracy: 3, timestamp: Date.now(), speed: 0, course: null });
+  simulation.timer = setInterval(() => {
+    if (document.hidden || !simulation) return;
+    const speed = Number(getElement('simulation-speed').value);
+    const position = simulation.engine.step(speed, Number(getElement('simulation-offset').value));
+    simulation.done = position.done;
+    updateInterface({ ...position, accuracy: 3, timestamp: Date.now(), speed: position.done ? 0 : speed });
+  }, 1000);
+  getElement('navigation-dialog').close();
+  setBottomSheetState(false);
+});

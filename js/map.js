@@ -432,6 +432,7 @@ export function initializeMap(containerId) {
   }
 
   return {
+    clearBoat() { boatMarker?.remove(); boatMarker = null; },
     getVisibleBounds: visibleBounds,
     showOfflineRegion(zone) {
       manualZone = zone;

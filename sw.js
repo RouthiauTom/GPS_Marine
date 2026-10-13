@@ -1,11 +1,12 @@
 // Bump the release whenever a precached file changes. Updates wait until all
 // existing app windows close; never reload an active navigation session.
-const RELEASE = '1.3.0';
+const RELEASE = '1.4.0';
 const CACHE_PREFIX = `marine-gps-shell-${encodeURIComponent(self.registration.scope)}-`;
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE}`;
 const FILES = [
   './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js', './js/map.js', './js/gps.js', './js/navigation.mjs',
+  './js/navigation-tools.mjs',
   './js/storage.js', './js/track.js', './js/route.js', './js/waypoint.js',
   './js/gpx.js', './js/pwa.js',
   './js/offline-maps.js', './js/offline-maps-ui.js', './vendor/pmtiles/pmtiles.js', './vendor/pmtiles/fflate.js',

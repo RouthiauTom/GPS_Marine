@@ -90,6 +90,25 @@ PMTiles est adapté au chemin local ; aucune dépendance CDN n’est nécessaire
 
 ## Navigation
 
+Pendant le suivi d’une route, **Réglages** permet de choisir un seuil d’alerte
+d’écart de 50, 100, 200 ou 500 m (100 m par défaut, sauvegardé sur cet appareil).
+L’alerte visuelle se déclenche lorsque l’écart transversal, diminué de l’incertitude
+GPS, dépasse le seuil pendant au moins 3 secondes de positions reçues. Elle se
+désactive lorsque l’écart augmenté de cette incertitude repasse sous 80 % du seuil.
+Une position périmée, imprécise ou en erreur suspend la surveillance. Le premier
+point n’a pas encore de segment de référence ; la surveillance commence au deuxième.
+Il n’y a ni signal sonore ni garantie d’alerte lorsque l’application est masquée.
+
+Le même panneau propose **Démarrer la simulation** : parcours depuis le premier
+point, vitesse réglable et décalage fictif à bâbord pour tester l’alerte. Remettre
+l’écart à zéro permet d’atteindre les points suivants. Le statut SIMULATION et le
+bouton **Quitter la simulation** restent visibles ; les positions fictives ne
+sont jamais ajoutées aux traces. Mettre un enregistrement en pause avant de lancer
+ce test. La simulation est suspendue lorsque la page est masquée et n’est pas
+restaurée au rechargement. Quitter restitue le point cible initial, retire le
+bateau fictif et attend une nouvelle position GPS réelle. Les vitesses accélérées
+affichées sont uniquement celles du test. Tout fonctionne aussi hors connexion.
+
 - Créer ou importer une route puis choisir **Suivre** dans la liste des routes.
 - Le premier point est la cible initiale. **Suivant** et **Précédent** permettent
   de choisir explicitement le point visé ; aucune branche n'est choisie par proximité.
