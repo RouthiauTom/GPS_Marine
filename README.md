@@ -239,3 +239,47 @@ Le glissement reste disponible sur son en-tête ; les listes ouvertes peuvent
 être parcourues normalement. Les actions de création précèdent les sorties,
 repères et routes. Le bouton Réglages reste en haut à gauche. Les animations
 respectent la préférence système de réduction des mouvements.
+
+## Météo marine et accès aux marées
+
+Le bouton météo dans la barre supérieure ouvre les prévisions autour d’un point :
+**Vendée** (46,600° N, 2,100° O, au large), **Centre carte** pour choisir n’importe
+quel secteur couvert, ou **Bateau** avec une position GPS réelle et récente.
+Aucune position simulée n’est utilisée. L’ouverture récupère les prévisions ; aucun
+appel météo n’est lancé au démarrage ni pendant les déplacements de la carte.
+
+La météo utilise les API [Weather](https://open-meteo.com/en/docs) et
+[Marine](https://open-meteo.com/en/docs/marine-weather-api) d’Open-Meteo : vent à
+10 mètres, rafales en nœuds, provenance du vent, hauteur significative des vagues,
+période et provenance. Les modèles ont une couverture mondiale, avec des lacunes
+possibles suivant le point et la variable. La maille réellement renvoyée est
+indiquée séparément pour le vent et les vagues ; elle peut différer du point demandé.
+Ce sont des prévisions de modèles, pas des observations ni un bulletin de sécurité.
+
+Les requêtes portent sur trois jours de données horaires ; l’interface affiche les
+48 prochaines heures, toutes les trois heures. Les instants UTC sont convertis dans
+le fuseau du téléphone, indiqué dans le panneau. Les données absentes restent « — ».
+Les séries expirées ne sont jamais présentées comme des prévisions actuelles.
+
+Les six derniers points sont sauvegardés localement avec la **date de récupération
+propre à chaque source** (pas la date du calcul du modèle). Le dernier lieu choisi
+est restauré. Les données datant de moins de 30 minutes évitent un nouvel appel à
+l’ouverture ; le bouton Actualiser permet une demande explicite, espacée d’au moins
+une minute par point. Le bouton Bateau capture une position, sans suivi météo continu.
+Chaque récupération transmet les coordonnées arrondies au millième de degré aux
+services Open-Meteo. En cas d’échec partiel, les anciennes données de la même source
+et du même point sont conservées avec leur date d’origine. Sans réseau, le panneau
+indique explicitement qu’il consulte des données sauvegardées. Si le stockage est
+refusé, un message indique que la conservation reste limitée à la session.
+
+L’accès gratuit Open-Meteo est réservé à l’usage **non commercial**, sans clé API,
+dans les limites du fournisseur. Données CC BY 4.0 avec attribution et lien de licence
+visibles dans le panneau. Voir les [conditions](https://open-meteo.com/en/terms)
+avant une diffusion commerciale de l’application.
+
+Pour les marées françaises, un lien ouvre le [portail gratuit du Shom](https://maree.shom.fr/).
+Les horaires et hauteurs par port ne sont pas importés ni disponibles hors ligne.
+Le niveau marin mondial d’Open-Meteo n’est pas utilisé comme table de marée : sa
+documentation précise que sa résolution et sa précision côtière ne conviennent pas
+à la navigation côtière. Aucune estimation de pleine/basse mer ou de hauteur sous
+quille n’est calculée à partir de ces modèles dans cette version.

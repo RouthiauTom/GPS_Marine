@@ -434,6 +434,10 @@ export function initializeMap(containerId) {
   return {
     clearBoat() { boatMarker?.remove(); boatMarker = null; },
     getVisibleBounds: visibleBounds,
+    getWeatherCenter() {
+      const center = map.getCenter();
+      return { latitude: center.lat, longitude: ((center.lng + 180) % 360 + 360) % 360 - 180 };
+    },
     showOfflineRegion(zone) {
       manualZone = zone;
       map.fitBounds([[zone.bounds[0], zone.bounds[1]], [zone.bounds[2], zone.bounds[3]]], { padding: 35, duration: 0 });

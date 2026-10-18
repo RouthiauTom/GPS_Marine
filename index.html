@@ -16,8 +16,8 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.6.1">
-  <link rel="stylesheet" href="./css/interface.css?v=1.6.1">
+  <link rel="stylesheet" href="./css/app.css?v=1.7.0">
+  <link rel="stylesheet" href="./css/interface.css?v=1.7.0">
 </head>
 
 <body>
@@ -35,6 +35,9 @@
   <nav class="top-actions" aria-label="Actions principales">
     <button id="locate" class="track-icon-button" type="button" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" /><circle cx="12" cy="12" r="2" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3" /></svg>
+    </button>
+    <button id="open-weather" class="track-icon-button" type="button" aria-label="Météo marine" title="Météo marine" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14a4 4 0 1 1 1-7 6 6 0 0 1 11 2 3 3 0 0 1 0 6M3 18h13a2 2 0 1 0-2-2M6 21h5"/></svg>
     </button>
     <button id="open-gpx" class="gpx-action" aria-label="Importer ou exporter GPX" title="Importer ou exporter GPX">GPX</button>
     <div class="track-control-stack">
@@ -263,6 +266,38 @@
     <p>Avant le départ, attendez « Application prête hors connexion », puis testez une fermeture et une réouverture sans réseau. L’effacement des données du navigateur retire les sauvegardes locales et la préparation hors ligne.</p>
   </dialog>
 
+  <dialog id="weather-dialog" class="app-dialog" aria-labelledby="weather-title">
+    <div class="sheet-heading"><h2 id="weather-title">Météo marine</h2><button id="close-weather" class="icon-button" type="button" aria-label="Fermer">×</button></div>
+    <p id="weather-location"></p>
+    <div class="weather-actions" role="group" aria-label="Lieu des prévisions">
+      <button id="weather-vendee" type="button">Vendée</button>
+      <button id="weather-center" type="button">Centre carte</button>
+      <button id="weather-boat" type="button">Bateau</button>
+    </div>
+    <p id="weather-status" role="status" aria-live="polite"></p>
+    <button id="weather-refresh" type="button">Actualiser</button>
+    <p id="weather-valid-time"></p>
+    <div class="weather-summary">
+      <div><span>Vent à 10 m</span><strong id="weather-wind-now">—</strong><p id="weather-gust-now"></p></div>
+      <div><span>Vagues significatives</span><strong id="weather-wave-now">—</strong><p id="weather-period-now"></p></div>
+    </div>
+    <h3>Prochaines 48 heures</h3>
+    <p id="weather-timezone"></p>
+    <div class="weather-table-wrap"><table id="weather-table" hidden>
+      <caption class="visually-hidden">Prévisions toutes les trois heures</caption>
+      <thead><tr><th scope="col">Date / heure</th><th scope="col">Vent / rafales<br>Provenance</th><th scope="col">Vagues / période<br>Provenance</th></tr></thead>
+      <tbody id="weather-rows"></tbody>
+    </table></div>
+    <p id="weather-wind-date"></p><p id="weather-sea-date"></p>
+    <details><summary>Comprendre ces prévisions</summary>
+    <p>Pour un autre secteur, centrez la carte dessus puis choisissez « Centre carte ». Le lieu reste fixe jusqu’à une nouvelle sélection. Les coordonnées de ce point sont transmises au fournisseur météo lors de la récupération.</p>
+    <p>Prévisions de modèles, pas des mesures. « — » signifie donnée absente. La maille du modèle peut être éloignée du point choisi ; les conditions locales près des côtes peuvent différer. Les dates indiquées sont celles de récupération, pas celles de calcul des modèles.</p></details>
+    <p>Source : <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>, données <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Accès gratuit pour usage non commercial.</p>
+    <h3>Marées en France</h3>
+    <p>Consultez les horaires et hauteurs du port sur le portail du Shom. Ils ne sont pas téléchargés dans l’application.</p>
+    <a class="weather-tides" href="https://maree.shom.fr/" target="_blank" rel="noopener noreferrer">Consulter les marées du Shom ↗</a>
+  </dialog>
+
   <dialog id="settings-dialog" class="app-dialog" aria-labelledby="settings-title">
     <div class="sheet-heading">
       <h2 id="settings-title">Réglages</h2>
@@ -334,6 +369,6 @@
     <p>Conservez cette page ouverte pendant le téléchargement. Testez la zone en mode avion avant le départ. Le navigateur peut effacer les cartes en cas de manque de place ; vos exports GPX restent indispensables.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.6.1"></script>
+  <script type="module" src="./js/app.js?v=1.7.0"></script>
 </body>
 </html>
