@@ -204,3 +204,38 @@ supprimer les caches d’une autre installation sur le même domaine.
 Pour actualiser MapLibre, mettre à jour la version npm, copier les fichiers de
 production et la licence depuis `node_modules/maplibre-gl/` vers `vendor/maplibre-gl/`,
 puis incrémenter la version du cache et exécuter les tests.
+
+## Écran et mode nuit
+
+Le bouton **Réglages** (roue dentée en haut à gauche) regroupe **Écran et mode nuit**
+et **Installation / hors ligne**. Il est accessible même sans route active. Les deux
+préférences sont sauvegardées sur cet appareil (en session seulement si le stockage
+est bloqué).
+
+- **Mode nuit** : interface sombre et carte atténuée, sans inversion des couleurs
+  nautiques. Fonctionne aussi avec les cartes téléchargées. La luminosité matérielle
+  reste réglée par le téléphone ; revenir au mode jour décoche cette option.
+- **Garder l’écran allumé pendant le guidage** : activé par défaut, demande le
+  maintien uniquement lorsqu’une route est suivie, avant l’arrivée et hors simulation.
+  Le maintien est libéré à l’arrêt du guidage, à l’arrivée ou au masquage de la page.
+  Il est redemandé au retour dans l’application si le guidage continue. L’état réel
+  apparaît dans les réglages et au-dessus des instruments. Un refus ou une révocation
+  visible du système propose **Réessayer**, sans boucle automatique de demandes.
+
+La [Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API)
+nécessite un contexte sécurisé et un navigateur compatible. Le système peut refuser
+ou retirer le maintien, notamment pour économiser la batterie. Cette option ne
+permet pas l’enregistrement en arrière-plan ou écran verrouillé. Les tests automatisés
+simulent les réponses de cette API ; vérifier le comportement réel sur le téléphone.
+
+## Interface
+
+L’interface utilise les polices système, des panneaux translucides et une palette
+commune aux modes jour et nuit. La feuille `css/interface.css` regroupe cette
+présentation ; elle est également préparée pour le fonctionnement hors ligne.
+
+Le chevron du panneau Navigation permet d’ouvrir ou réduire le menu au toucher.
+Le glissement reste disponible sur son en-tête ; les listes ouvertes peuvent
+être parcourues normalement. Les actions de création précèdent les sorties,
+repères et routes. Le bouton Réglages reste en haut à gauche. Les animations
+respectent la préférence système de réduction des mouvements.

@@ -16,16 +16,21 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.4.0">
+  <link rel="stylesheet" href="./css/app.css?v=1.6.1">
+  <link rel="stylesheet" href="./css/interface.css?v=1.6.1">
 </head>
 
 <body>
   <div id="map"></div>
-  <div id="map-status" role="status" aria-live="polite">Chargement du fond de carte…</div>
-
-  <div id="status" class="app-status" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
-  <div id="track-status" class="app-status" role="status" aria-live="polite">Trace arrêtée</div>
-  <button id="simulation-exit" type="button" hidden>Quitter la simulation</button>
+  <button id="open-settings" class="track-icon-button settings-button" type="button" aria-label="Ouvrir les réglages" title="Réglages" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-.6 2.5-2.2 1.3L3.7 6l-2 3.5 1.9 1.7v2.6l-1.9 1.7 2 3.5 2.5-.8 2.2 1.3L9 22h4l.6-2.5 2.2-1.3 2.5.8 2-3.5-1.9-1.7v-2.6l1.9-1.7-2-3.5-2.5.8-2.2-1.3L13 3z"/><circle cx="11" cy="12.5" r="3.5"/></svg>
+  </button>
+  <div class="map-notices">
+    <div id="status" class="app-status" role="status" aria-live="polite">GPS : attente d'autorisation…</div>
+    <div id="track-status" class="app-status" role="status" aria-live="polite">Trace arrêtée</div>
+    <button id="simulation-exit" type="button" hidden>Quitter la simulation</button>
+    <div id="map-status" role="status" aria-live="polite">Chargement du fond de carte…</div>
+  </div>
 
   <nav class="top-actions" aria-label="Actions principales">
     <button id="locate" class="track-icon-button" type="button" aria-label="Recentrer sur le bateau" title="Recentrer sur le bateau">
@@ -53,7 +58,11 @@
   </nav>
 
   <div id="bottom-sheet" class="bottom-sheet collapsed" role="region" tabindex="0" aria-expanded="false" aria-label="Panneau de navigation et actions. Faites glisser pour ouvrir ou fermer.">
-    <div class="bottom-sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-toolbar">
+      <span class="sheet-eyebrow">Navigation</span>
+      <div id="screen-state" class="screen-state" role="status" hidden></div>
+      <button id="sheet-toggle" type="button" aria-label="Ouvrir le menu de navigation" aria-expanded="false" aria-controls="bottom-sheet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 14 5-5 5 5"/></svg></button>
+    </div>
 
     <div class="bottom-sheet-header">
       <div class="bottom-sheet-side-instrument">
@@ -100,12 +109,11 @@
     </div>
 
     <div class="bottom-sheet-actions">
-      <button id="menu-add-waypoint" class="primary-action" type="button">＋ Créer un repère nautique</button>
-      <button id="menu-offline" type="button">Installation / hors ligne</button>
-      <button id="menu-tracks" type="button">Sorties enregistrées</button>
-      <button id="menu-start-route" type="button">Créer une route</button>
-      <button id="menu-toggle-waypoints" type="button">Waypoints <span id="menu-waypoint-count">0</span></button>
-      <button id="menu-toggle-routes" type="button">Routes <span id="menu-route-count">0</span></button>
+      <button id="menu-add-waypoint" class="primary-action" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg><span>Nouveau repère</span></button>
+      <button id="menu-start-route" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M9 18h6a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6"/></svg><span>Créer une route</span></button>
+      <button id="menu-tracks" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 18 5-7 4 3 7-10M4 21h16"/></svg><span>Sorties enregistrées</span></button>
+      <button id="menu-toggle-waypoints" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V3h12l-2 4 2 4H6"/></svg><span>Repères</span><span id="menu-waypoint-count">0</span></button>
+      <button id="menu-toggle-routes" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></svg><span>Routes</span><span id="menu-route-count">0</span></button>
     </div>
   </div>
 
@@ -255,6 +263,30 @@
     <p>Avant le départ, attendez « Application prête hors connexion », puis testez une fermeture et une réouverture sans réseau. L’effacement des données du navigateur retire les sauvegardes locales et la préparation hors ligne.</p>
   </dialog>
 
+  <dialog id="settings-dialog" class="app-dialog" aria-labelledby="settings-title">
+    <div class="sheet-heading">
+      <h2 id="settings-title">Réglages</h2>
+      <button id="close-settings" class="icon-button" type="button" aria-label="Fermer">×</button>
+    </div>
+    <div class="settings-options">
+      <button id="menu-display" type="button">Écran et mode nuit</button>
+      <button id="menu-offline" type="button">Installation / hors ligne</button>
+    </div>
+  </dialog>
+
+  <dialog id="display-dialog" class="app-dialog" aria-labelledby="display-title">
+    <div class="sheet-heading">
+      <h2 id="display-title">Écran et mode nuit</h2>
+      <button id="close-display" class="icon-button" type="button" aria-label="Fermer">×</button>
+    </div>
+    <label class="display-option"><input id="night-mode" type="checkbox"> Mode nuit</label>
+    <p>Interface sombre et carte atténuée, y compris hors ligne. La luminosité du téléphone reste réglable dans ses paramètres.</p>
+    <label class="display-option"><input id="keep-awake" type="checkbox"> Garder l’écran allumé pendant le guidage</label>
+    <p id="wake-status" role="status" aria-live="polite"></p>
+    <button id="wake-retry" type="button" hidden>Réessayer</button>
+    <p>Le maintien s’arrête à la fin du guidage ou lorsque l’application est masquée. Le téléphone peut le refuser, notamment pour économiser la batterie. Cela ne permet pas l’enregistrement écran verrouillé.</p>
+  </dialog>
+
   <dialog id="navigation-dialog" class="app-dialog" aria-labelledby="navigation-settings-title">
     <div class="sheet-heading">
       <h2 id="navigation-settings-title">Guidage et simulation</h2>
@@ -302,6 +334,6 @@
     <p>Conservez cette page ouverte pendant le téléchargement. Testez la zone en mode avion avant le départ. Le navigateur peut effacer les cartes en cas de manque de place ; vos exports GPX restent indispensables.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.4.0"></script>
+  <script type="module" src="./js/app.js?v=1.6.1"></script>
 </body>
 </html>

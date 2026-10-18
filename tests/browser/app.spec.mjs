@@ -223,3 +223,117 @@ test('an offline simulation reaches the final target and Terminer exits simulati
   await expect(page.locator('#navigation-controls')).toBeHidden();
   await expect(page.locator('#status')).not.toContainText('SIMULATION');
 });
+
+async function mockWake(page, mode = 'ok') {
+  await page.addInitScript(mode => {
+    window.wakeRequests = 0;
+    window.wakeReleases = 0;
+    window.wakeMode = mode;
+    Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { async request() {
+      window.wakeRequests++;
+      if (window.wakeMode === 'fail') throw new Error('Denied');
+      if (window.wakeMode === 'pending') await new Promise(resolve => { window.resolveWake = resolve; });
+      const sentinel = new EventTarget();
+      sentinel.released = false;
+      sentinel.release = async () => {
+        if (!sentinel.released) { sentinel.released = true; window.wakeReleases++; sentinel.dispatchEvent(new Event('release')); }
+      };
+      window.testSentinel = sentinel;
+      return sentinel;
+    } } });
+  }, mode);
+}
+async function openDisplay(page) {
+  await expand(page);
+  await page.locator('#open-settings').click();
+  await page.locator('#menu-display').click();
+}
+
+test('night mode persists offline and styles map, instruments and dialogs', async ({ context, page }) => {
+  await openDisplay(page);
+  await page.locator('#night-mode').check();
+  await expect(page.locator('body')).toHaveClass(/night-mode/);
+  await expect(page.locator('#display-dialog')).toHaveCSS('background-color', 'rgba(23, 29, 39, 0.96)');
+  await expect(page.locator('.maplibregl-canvas')).toHaveCSS('filter', 'brightness(0.55)');
+  await page.screenshot({ path: 'test-results/night-settings.png' });
+  await page.locator('#close-display').click();
+  await expect(page.locator('#menu-start-route')).toHaveCSS('background-color', 'rgb(32, 62, 52)');
+  await page.screenshot({ path: 'test-results/night-map.png' });
+  await expect(page.locator('#offline-status')).toContainText('Application prête');
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('body')).toHaveClass(/night-mode/);
+  await openDisplay(page);
+  await expect(page.locator('#night-mode')).toBeChecked();
+  await page.locator('#night-mode').uncheck();
+  await expect(page.locator('.maplibregl-canvas')).toHaveCSS('filter', 'none');
+});
+
+test('screen lock follows guidance, visibility, preference and simulation lifecycle', async ({ page }) => {
+  await mockWake(page);
+  await followTestRoute(page);
+  await expect(page.locator('#screen-state')).toHaveText('Écran allumé');
+  expect(await page.evaluate(() => window.wakeRequests)).toBe(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(() => page.evaluate(() => window.wakeReleases)).toBe(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.locator('#screen-state')).toHaveText('Écran allumé');
+  expect(await page.evaluate(() => window.wakeRequests)).toBe(2);
+  await openDisplay(page);
+  await page.locator('#keep-awake').uncheck();
+  await expect(page.locator('#wake-status')).toContainText('désactivé');
+  await expect.poll(() => page.evaluate(() => window.wakeReleases)).toBe(2);
+  await page.locator('#keep-awake').check();
+  await expect(page.locator('#wake-status')).toContainText('maintenu allumé');
+  await page.locator('#close-display').click();
+  await page.locator('#navigation-settings').click();
+  await page.locator('#simulation-start').click();
+  await expect.poll(() => page.evaluate(() => window.wakeReleases)).toBe(3);
+  await expect(page.locator('#screen-state')).toBeHidden();
+  await page.locator('#simulation-exit').click();
+  await expect(page.locator('#screen-state')).toHaveText('Écran allumé');
+  await page.locator('#navigation-stop').click();
+  await expect.poll(() => page.evaluate(() => window.wakeReleases)).toBe(4);
+});
+
+test('refused and system-released locks show status and require explicit retry', async ({ page }) => {
+  await mockWake(page, 'fail');
+  await followTestRoute(page);
+  await openDisplay(page);
+  await expect(page.locator('#wake-status')).toContainText('refusé');
+  await page.clock.install();
+  await page.clock.runFor(3000);
+  expect(await page.evaluate(() => window.wakeRequests)).toBe(1);
+  await page.evaluate(() => { window.wakeMode = 'ok'; });
+  await page.locator('#wake-retry').click();
+  await expect(page.locator('#wake-status')).toContainText('maintenu allumé');
+  await page.evaluate(() => window.testSentinel.release());
+  await expect(page.locator('#wake-status')).toContainText('interrompu');
+  await page.clock.runFor(3000);
+  expect(await page.evaluate(() => window.wakeRequests)).toBe(2);
+});
+
+test('a late screen lock is released after guidance stops', async ({ page }) => {
+  await mockWake(page, 'pending');
+  await followTestRoute(page);
+  await page.locator('#navigation-stop').click();
+  await page.evaluate(() => window.resolveWake());
+  await expect.poll(() => page.evaluate(() => window.wakeReleases)).toBe(1);
+  await expect(page.locator('#screen-state')).toBeHidden();
+});
+
+test('unsupported screen lock keeps night mode available', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: undefined }));
+  await page.reload();
+  await openDisplay(page);
+  await expect(page.locator('#keep-awake')).toBeDisabled();
+  await expect(page.locator('#wake-status')).toContainText('indisponible');
+  await page.locator('#night-mode').check();
+  await expect(page.locator('body')).toHaveClass(/night-mode/);
+});

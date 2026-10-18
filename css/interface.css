@@ -1,0 +1,132 @@
+/* Shared visual language for map controls, sheets, settings and offline screens. */
+body {
+  --surface: rgba(248, 250, 253, .94);
+  --cell: rgba(255, 255, 255, .85);
+  --ink: #1d2838;
+  --muted: #657387;
+  --line: rgba(54, 73, 99, .12);
+  --tint: #19745a;
+  --tint-soft: #e3f3eb;
+  --shadow: 0 8px 32px #152d4820, 0 1px 3px #152d4810;
+  --map-control-clearance: 134px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+body.night-mode {
+  --surface: rgba(23, 29, 39, .96);
+  --cell: #232d3b;
+  --ink: #e2e9f2;
+  --muted: #a0aec0;
+  --line: #ffffff17;
+  --tint: #73d6b0;
+  --tint-soft: #203e34;
+  --shadow: 0 8px 32px #0005;
+}
+button, input, select { font: inherit; }
+button { font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background .18s, box-shadow .18s, opacity .18s, transform .18s; }
+button:active:not(:disabled) { transform: scale(.97); }
+button:disabled { cursor: default; opacity: .42; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--tint); outline-offset: 3px; }
+button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet, .route-editor, .waypoint-placement) {
+  color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow); backdrop-filter: blur(24px) saturate(1.3); -webkit-backdrop-filter: blur(24px) saturate(1.3);
+}
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet, .route-editor) :is(h2, h3, strong, legend) { color: var(--ink); }
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet, .route-editor) :is(p, label, .label, .waypoint-info span, .waypoint-notice) { color: var(--muted); }
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet, .route-editor) button:not(.danger-action):not(.delete-waypoint):not(.primary-action) {
+  color: var(--ink); background: var(--cell); border: 1px solid var(--line); border-radius: 12px; min-height: 44px;
+}
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet, .route-editor) .primary-action {
+  color: white; background: #19745a; border: 1px solid transparent; border-radius: 12px; min-height: 44px;
+}
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet, .route-editor) .danger-action { border-radius: 12px; min-height: 44px; }
+body .top-actions .track-icon-button, body .gpx-action, body #open-settings {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+body .top-actions { gap: 10px; }
+body .record-dot { background: #ff453a; }
+body .map-notices { gap: 5px; }
+body .map-notices :is(#status, #track-status) {
+  border-radius: 9px; background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+  padding: 5px 9px; font-size: 11px; box-shadow: 0 2px 6px #00000006; backdrop-filter: blur(14px);
+}
+body.gps-unreliable .map-notices #status { background: #fff0e5; color: #8a3b12; }
+body.night-mode.gps-unreliable .map-notices #status { background: #3d2b20; color: #ffc29a; }
+body .map-notices #map-status { font-size: 11px; border-radius: 9px; }
+body #bottom-sheet {
+  left: 10px; right: 10px; bottom: 8px; border-radius: 26px;
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); touch-action: pan-y;
+  transition: height .32s cubic-bezier(.22,1,.36,1); overscroll-behavior: contain;
+}
+body #bottom-sheet.collapsed { height: calc(122px + env(safe-area-inset-bottom)); }
+body #bottom-sheet.collapsed.following-route { height: calc(290px + env(safe-area-inset-bottom)); }
+body #bottom-sheet.expanded { height: min(72dvh, calc(410px + env(safe-area-inset-bottom))); overflow-y: auto; }
+body #bottom-sheet.expanded.following-route { height: min(78dvh, calc(560px + env(safe-area-inset-bottom))); }
+body.sheet-following-route:not(.sheet-expanded) { --map-control-clearance: 302px; }
+body.sheet-expanded { --map-control-clearance: min(72dvh, 420px); }
+body.sheet-expanded.sheet-following-route { --map-control-clearance: min(78dvh, 570px); }
+.sheet-toolbar { display: flex; align-items: center; gap: 8px; height: 34px; touch-action: none; }
+.sheet-eyebrow { color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; }
+body #bottom-sheet .screen-state { position: static; color: var(--muted); font-size: 9px; margin-left: auto; }
+body #bottom-sheet #sheet-toggle { margin-left: auto; min-height: 32px; height: 32px; width: 44px; padding: 4px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); }
+#sheet-toggle svg { transition: transform .25s; }
+#sheet-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+body #bottom-sheet .bottom-sheet-header { min-height: 58px; touch-action: none; }
+body #bottom-sheet .bottom-sheet-speed strong { font-size: 40px; font-weight: 550; letter-spacing: -.06em; }
+body #bottom-sheet .bottom-sheet-side-instrument strong { font-size: 17px; font-weight: 550; }
+body #bottom-sheet .bottom-sheet-speed span { color: var(--muted); font-size: 12px; }
+body #bottom-sheet .label { font-size: 10px; letter-spacing: .03em; }
+body #bottom-sheet .navigation-route-name { color: var(--ink); font-size: 12px; margin-top: 8px; text-align: left; }
+body #bottom-sheet #navigation-alert { padding: 7px 9px; margin-top: 7px; font-size: 11px; border-radius: 9px; }
+body #bottom-sheet #navigation-alert:not(.is-alert) { background: var(--tint-soft); color: var(--tint); }
+body #bottom-sheet .navigation-instruments { gap: 0; margin-top: 10px; }
+body #bottom-sheet .navigation-instruments .instrument { border: 0; border-right: 1px solid var(--line); border-radius: 0; background: transparent; padding: 3px 6px; }
+body #bottom-sheet .navigation-instruments .instrument:last-child { border: 0; }
+body #bottom-sheet .navigation-instruments strong { font-size: 14px; }
+body #bottom-sheet .navigation-instruments .label { font-size: 9px; }
+body #bottom-sheet .navigation-controls { margin-top: 10px; gap: 5px; }
+body #bottom-sheet .navigation-controls button { padding: 7px 3px; font-size: 11px; }
+body #bottom-sheet .bottom-sheet-actions { gap: 7px; margin-top: 16px; }
+body #bottom-sheet .bottom-sheet-actions button {
+  display: flex; align-items: center; gap: 11px; padding: 12px; text-align: left;
+  color: var(--ink); background: var(--cell); border: 1px solid var(--line); font-size: 13px; font-weight: 550;
+  grid-column: 1 / -1; border-radius: 13px;
+}
+body #bottom-sheet .bottom-sheet-actions button svg { color: var(--tint); width: 21px; height: 21px; }
+body #bottom-sheet .bottom-sheet-actions :is(#menu-add-waypoint, #menu-start-route) {
+  grid-column: auto; min-height: 62px; gap: 8px; color: var(--tint); background: var(--tint-soft); border-color: transparent;
+}
+body #bottom-sheet :is(#menu-route-count, #menu-waypoint-count) { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+body .app-dialog { border-radius: 26px; padding: 22px; width: min(440px, calc(100% - 24px)); }
+body .app-dialog[open] { animation: panel-in .2s ease-out; }
+body .app-dialog::backdrop { background: #101c2b44; backdrop-filter: blur(5px); }
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet) h2 { font-size: 21px; letter-spacing: -.04em; font-weight: 650; }
+body :is(#bottom-sheet, .app-dialog, .waypoint-sheet) h3 { font-size: 16px; letter-spacing: -.02em; }
+body :is(#bottom-sheet, .app-dialog) p { line-height: 1.55; }
+body :is(#bottom-sheet, .app-dialog) :is(input, select) { border-radius: 12px; background: var(--cell); color: var(--ink); border: 1px solid var(--line); min-height: 46px; }
+body :is(#bottom-sheet, .app-dialog) input[type="checkbox"] { min-height: 22px; accent-color: #19745a; }
+body .settings-options { gap: 0; border-radius: 16px; overflow: hidden; }
+body #settings-dialog .settings-options button { border: 0; border-radius: 0; min-height: 58px; padding: 15px; display: flex; align-items: center; justify-content: space-between; }
+body #settings-dialog .settings-options button + button { border-top: 1px solid var(--line); }
+.settings-options button::after { content: '›'; font-size: 24px; font-weight: 400; color: var(--muted); }
+body .waypoint-sheet { left: 8px; right: 8px; bottom: 8px; max-height: 65dvh; border-radius: 26px; padding: 20px 18px calc(22px + env(safe-area-inset-bottom)); }
+body .waypoint-row { border-color: var(--line); padding: 14px 0; }
+body .waypoint-sheet .route-row-selected { background: var(--tint-soft); border-radius: 14px; padding: 12px; }
+body .route-editor { border-radius: 20px; }
+body .maplibregl-ctrl-group { border-radius: 14px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+@keyframes panel-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  body *, body *::before, body *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (min-width: 700px) {
+  body #bottom-sheet { right: auto; width: 390px; }
+  body .waypoint-sheet { right: auto; width: 420px; }
+}
+@media (max-height: 500px) {
+  body #bottom-sheet { max-height: calc(100dvh - 86px); overflow-y: auto; }
+}
+@media (min-width: 700px) {
+  body #map .maplibregl-ctrl-bottom-right { bottom: calc(12px + env(safe-area-inset-bottom)); }
+}

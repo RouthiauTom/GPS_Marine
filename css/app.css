@@ -1095,3 +1095,51 @@ body.sheet-expanded { --map-control-clearance: 310px; }
   pointer-events: none;
 }
 #map-status[hidden], #install-app[hidden], #offline-update[hidden] { display: none; }
+
+/* Display settings apply equally to downloaded maps and the online map. */
+.app-dialog .display-option { display: flex; align-items: center; gap: 12px; min-height: 44px; font-size: 15px; }
+.app-dialog .display-option input { width: 22px; height: 22px; min-height: 22px; accent-color: #26735e; }
+.screen-state { position: absolute; right: 12px; top: 5px; font-size: 10px; color: #52635f; }
+body.night-mode { color-scheme: dark; background: #101b20; }
+body.night-mode #map .maplibregl-canvas { filter: brightness(.55); }
+body.night-mode :is(.bottom-sheet, .waypoint-sheet, .route-editor, .waypoint-placement, .app-dialog) {
+  background: #101b20; color: #d3deda; border-color: #3a5058;
+}
+body.night-mode :is(.bottom-sheet, .waypoint-sheet, .route-editor, .waypoint-placement, .app-dialog) :is(strong, h2, h3, legend) { color: #d3deda; }
+body.night-mode :is(.label, .screen-state, .bottom-sheet-speed span, .navigation-route-name, .waypoint-info span, .waypoint-notice, .export-item span, .export-empty),
+body.night-mode :is(.app-dialog, .route-editor, .waypoint-placement) :is(p, label) { color: #aabbbd; }
+body.night-mode :is(.instrument, .navigation-instruments .instrument, .route-row-selected, .export-item, .export-item:has(input:checked)) {
+  background: #1c2c33; color: #d3deda; border-color: #3a5058;
+}
+body.night-mode :is(.bottom-sheet, .waypoint-sheet, .route-editor, .app-dialog) button:not(.danger-action):not(.delete-waypoint):not(.primary-action) {
+  background: #24383f; color: #d3deda; border-color: #476068;
+}
+body.night-mode :is(.primary-action, #menu-add-waypoint) { background: #22644f; color: #e0ece5; }
+body.night-mode .app-dialog :is(input, select) { background: #1c2c33; color: #d3deda; border-color: #476068; }
+body.night-mode #navigation-alert:not(.is-alert) { background: #24383f; color: #c9d8d8; }
+body.night-mode #map-status { background: #453d25; color: #ecd9a9; }
+body.night-mode .maplibregl-ctrl-group { background: #24383f; }
+body.night-mode .maplibregl-ctrl-icon { filter: invert(.85); }
+body.night-mode .maplibregl-ctrl-attrib { background: #101b20; color: #aabbbd; }
+body.night-mode .maplibregl-ctrl-attrib a { color: #aabbbd; }
+body.night-mode :is(.downloaded-maps li, .waypoint-row) { border-color: #3a5058; }
+body.night-mode :is(#toggle-waypoints, #toggle-routes, #start-route, #menu-start-route, #menu-toggle-routes, #menu-toggle-waypoints) {
+  background: #24383f; color: #d3deda; border-color: #476068;
+}
+
+.settings-button {
+  position: fixed; z-index: 17; top: max(10px, env(safe-area-inset-top)); left: 10px;
+  width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
+  background: #243038; color: white; box-shadow: 0 2px 8px #0004;
+}
+.settings-options { display: grid; gap: 12px; margin-top: 16px; }
+.settings-options button { min-height: 48px; text-align: left; }
+.map-notices {
+  position: fixed; z-index: 16; top: calc(max(10px, env(safe-area-inset-top)) + 54px);
+  left: 10px; max-width: calc(100vw - 84px); display: flex; flex-direction: column;
+  align-items: flex-start; gap: 6px; pointer-events: none;
+}
+.map-notices :is(#status, #track-status, #map-status, #simulation-exit) {
+  position: static; max-width: 100%; margin: 0;
+}
+.map-notices #simulation-exit { pointer-events: auto; }

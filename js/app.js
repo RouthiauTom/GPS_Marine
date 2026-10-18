@@ -1,9 +1,10 @@
+import { initializeDisplay } from './display.js';
 import { updateDeviation, createSimulator } from './navigation-tools.mjs';
 import { initializePwa } from './pwa.js';
 import { initializeOfflineMaps } from './offline-maps-ui.js';
 import { startWatching, stopWatching, isFreshPosition, isUsablePosition } from './gps.js';
 import { computeRouteNavigation, advanceNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js?v=1.4.0';
+import { initializeMap } from './map.js?v=1.6.1';
 import {
   addTrackPoint,
   clearTrack,
@@ -49,6 +50,7 @@ import {
 import { createGpx, parseGpx } from './gpx.js';
 
 const getElement = id => document.getElementById(id);
+const display = initializeDisplay();
 const map = initializeMap('map');
 let firstFix = true;
 const MIN_COG_SPEED = 0.5;
@@ -264,12 +266,15 @@ function setBottomSheetState(open) {
   bottomSheet.classList.toggle('collapsed', !open);
   document.body.classList.toggle('sheet-expanded', open);
   bottomSheet.setAttribute('aria-expanded', String(open));
+  getElement('sheet-toggle').setAttribute('aria-expanded', String(open));
+  getElement('sheet-toggle').setAttribute('aria-label', open ? 'Réduire le menu de navigation' : 'Ouvrir le menu de navigation');
 }
 
 function renderNavigation() {
   const route = activeNavigationRouteId
     ? getRoutes().find(item => item.id === activeNavigationRouteId)
     : null;
+  display.setNavigating(Boolean(route && !navigationState.completed && !simulation));
   getElement('bottom-sheet').classList.toggle('following-route', Boolean(route));
   document.body.classList.toggle('sheet-following-route', Boolean(route));
   getElement('navigation-route-name').hidden = !route;
@@ -728,9 +733,10 @@ getElement('navigation-stop').addEventListener('click', () => {
 });
 
 const bottomSheet = getElement('bottom-sheet');
+getElement('sheet-toggle').addEventListener('click', () => setBottomSheetState(!bottomSheetOpen));
 
 bottomSheet.addEventListener('pointerdown', event => {
-  if (event.target.closest('button')) return;
+  if (event.target.closest('button') || !event.target.closest('.sheet-toolbar, .bottom-sheet-header')) return;
   sheetTouchStartY = event.clientY;
   bottomSheet.setPointerCapture(event.pointerId);
 });

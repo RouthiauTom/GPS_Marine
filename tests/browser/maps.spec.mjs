@@ -57,6 +57,7 @@ async function prepare(context, page, { prefix = '/', failTile = false, changeVe
 
 async function openMaps(page) {
   await page.locator('#bottom-sheet').focus(); await page.keyboard.press('ArrowUp');
+  await page.locator('#open-settings').click();
   await page.locator('#menu-offline').click(); await page.locator('#open-offline-maps').click();
 }
 

@@ -93,6 +93,7 @@ test('missing cached asset is reported as incomplete rather than ready', async (
   });
   await page.locator('#bottom-sheet').focus();
   await page.keyboard.press('ArrowUp');
+  await page.locator('#open-settings').click();
   await page.locator('#menu-offline').click();
   await expect(page.locator('#offline-status')).toContainText('Préparation incomplète');
 });
@@ -120,6 +121,7 @@ test('an update waits for closing the app and preserves the recorded trace', asy
     expect(await page.evaluate(async () => (await caches.keys()).filter(key => key.startsWith('marine-gps-shell-')).length)).toBe(2);
     await page.locator('#bottom-sheet').focus();
     await page.keyboard.press('ArrowUp');
+    await page.locator('#open-settings').click();
     await page.locator('#menu-offline').click();
     await expect(page.locator('#offline-update')).toBeVisible();
     await page.locator('#close-offline').click();
