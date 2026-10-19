@@ -1,4 +1,3 @@
-export const VENDEE = { latitude: 46.6, longitude: -2.1, name: 'Au large de la Vendée' };
 export const WEATHER_FRESH_MS = 30 * 60 * 1000;
 const definitions = {
   wind: { endpoint: 'https://api.open-meteo.com/v1/forecast', fields: { wind_speed_10m: 'kn', wind_gusts_10m: 'kn', wind_direction_10m: '°' } },

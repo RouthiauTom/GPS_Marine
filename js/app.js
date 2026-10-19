@@ -5,7 +5,7 @@ import { initializePwa } from './pwa.js';
 import { initializeOfflineMaps } from './offline-maps-ui.js';
 import { startWatching, stopWatching, isFreshPosition, isUsablePosition } from './gps.js';
 import { computeRouteNavigation, advanceNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js?v=1.7.0';
+import { initializeMap } from './map.js?v=1.7.1';
 import {
   addTrackPoint,
   clearTrack,

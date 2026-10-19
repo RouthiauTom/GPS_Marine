@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 function response(kind, value = 12) {
   const time = Math.floor(Date.now() / 3600000) * 3600;
@@ -13,17 +14,18 @@ async function prepare(context, page, sea = 1.5) {
   await context.route('https://tiles.openseamap.org/**', route => route.abort());
   await context.route('https://api.open-meteo.com/**', route => route.fulfill({ json: response('wind') }));
   await context.route('https://marine-api.open-meteo.com/**', route => route.fulfill({ json: response('sea', sea) }));
+  await page.route('**/js/map.js*', async route => route.fulfill({ contentType: 'text/javascript', body: (await readFile('js/map.js', 'utf8')).replace('const map = new maplibregl.Map', 'const map = window.testMap = new maplibregl.Map') }));
   await page.goto('/');
   await expect(page.locator('#offline-status')).toContainText('Application prête');
   await page.locator('#open-weather').click();
   await expect(page.locator('#weather-wind-now')).toHaveText('12 nd');
 }
 
-test('Vendée weather is retrieved once, attributed and restored offline with its dates', async ({ context, page }) => {
+test('Map center weather is retrieved once, attributed and restored offline with its dates', async ({ context, page }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.clock.install();
   await prepare(context, page);
-  await expect(page.locator('#weather-location')).toContainText('Vendée');
+  await expect(page.locator('#weather-location')).toContainText('Centre de la carte');
   await expect(page.locator('#weather-wave-now')).toHaveText('1,5 m');
   await expect(page.locator('#weather-rows tr')).toHaveCount(16);
   const date = await page.locator('#weather-wind-date').textContent();
@@ -50,16 +52,17 @@ test('null marine data is never presented as a flat sea; arbitrary map centers u
     calls.push(new URL(route.request().url()));
     return route.fulfill({ json: response('wind', 22) });
   });
+  await page.evaluate(() => window.testMap.jumpTo({ center: [-2.1, 46.6] }));
   await page.locator('#weather-center').click();
   await expect(page.locator('#weather-wind-now')).toHaveText('22 nd');
   await expect(page.locator('#weather-location')).toContainText('Centre de la carte');
-  expect(calls[0].searchParams.get('latitude')).toBe('49.35');
-  expect(calls[0].searchParams.get('longitude')).toBe('-1.7');
+  expect(calls[0].searchParams.get('latitude')).toBe('46.6');
+  expect(calls[0].searchParams.get('longitude')).toBe('-2.1');
   await page.locator('#close-weather').click();
   await context.setOffline(true); await page.reload();
   await page.locator('#open-weather').click();
   await expect(page.locator('#weather-location')).toContainText('Centre de la carte');
-  await expect(page.locator('#weather-wind-now')).toHaveText('22 nd');
+  await expect(page.locator('#weather-wind-now')).toHaveText('12 nd');
 });
 
 test('partial refresh retains older marine data and its original date, without frequent retries', async ({ context, page }) => {
@@ -84,10 +87,25 @@ test('a late response cannot replace the newly selected location', async ({ cont
     await new Promise(resolve => setTimeout(resolve, 500));
     await route.fulfill({ json: response('wind', 30) });
   });
+  await page.evaluate(() => window.testMap.jumpTo({ center: [-2.1, 46.6] }));
   await page.locator('#weather-center').click();
-  await page.locator('#weather-vendee').click();
+  await page.evaluate(() => window.testMap.jumpTo({ center: [-1.7, 49.35] }));
+  await page.locator('#weather-center').click();
   await expect(page.locator('#weather-wind-now')).toHaveText('12 nd');
   await page.waitForTimeout(650);
-  await expect(page.locator('#weather-location')).toContainText('Vendée');
+  await expect(page.locator('#weather-location')).toContainText('Centre de la carte');
   await expect(page.locator('#weather-wind-now')).toHaveText('12 nd');
+});
+
+test('nearby settlement names are used, with a fallback for distant labels', async ({ context, page }) => {
+  await prepare(context, page);
+  await expect(page.locator('#weather-vendee')).toHaveCount(0);
+  await page.evaluate(() => {
+    window.testMap.queryRenderedFeatures = () => [{ sourceLayer: 'place', geometry: { type: 'Point', coordinates: [-1.7, 49.35] }, properties: { class: 'town', name: 'Ville test' } }];
+  });
+  await page.locator('#weather-center').click();
+  await expect(page.locator('#weather-location')).toContainText('Près de Ville test');
+  await page.evaluate(() => window.testMap.jumpTo({ center: [-2.1, 46.6] }));
+  await page.locator('#weather-center').click();
+  await expect(page.locator('#weather-location')).toContainText('Centre de la carte');
 });

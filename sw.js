@@ -1,6 +1,6 @@
 // Bump the release whenever a precached file changes. Updates wait until all
 // existing app windows close; never reload an active navigation session.
-const RELEASE = '1.7.0';
+const RELEASE = '1.7.1';
 const CACHE_PREFIX = `marine-gps-shell-${encodeURIComponent(self.registration.scope)}-`;
 const CACHE_NAME = `${CACHE_PREFIX}${RELEASE}`;
 const FILES = [

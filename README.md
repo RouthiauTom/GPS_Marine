@@ -242,9 +242,13 @@ respectent la préférence système de réduction des mouvements.
 
 ## Météo marine et accès aux marées
 
-Le bouton météo dans la barre supérieure ouvre les prévisions autour d’un point :
-**Vendée** (46,600° N, 2,100° O, au large), **Centre carte** pour choisir n’importe
-quel secteur couvert, ou **Bateau** avec une position GPS réelle et récente.
+Le bouton météo dans la barre supérieure ouvre les prévisions au **centre de la carte**.
+Le nom de la localité affichée la plus proche (à moins de 25 km) accompagne les
+coordonnées sous la forme « Près de… ». Les noms proviennent des cartes déjà
+chargées, y compris hors ligne ; sans localité disponible, « Centre de la carte »
+reste affiché. Aucun service de géocodage supplémentaire n’est appelé.
+**Centre carte** permet de resélectionner ce point, et **Bateau** utilise une
+position GPS réelle et récente.
 Aucune position simulée n’est utilisée. L’ouverture récupère les prévisions ; aucun
 appel météo n’est lancé au démarrage ni pendant les déplacements de la carte.
 
@@ -262,8 +266,7 @@ le fuseau du téléphone, indiqué dans le panneau. Les données absentes resten
 Les séries expirées ne sont jamais présentées comme des prévisions actuelles.
 
 Les six derniers points sont sauvegardés localement avec la **date de récupération
-propre à chaque source** (pas la date du calcul du modèle). Le dernier lieu choisi
-est restauré. Les données datant de moins de 30 minutes évitent un nouvel appel à
+propre à chaque source** (pas la date du calcul du modèle). Chaque ouverture utilise le centre actuel de la carte. Les données datant de moins de 30 minutes évitent un nouvel appel à
 l’ouverture ; le bouton Actualiser permet une demande explicite, espacée d’au moins
 une minute par point. Le bouton Bateau capture une position, sans suivi météo continu.
 Chaque récupération transmet les coordonnées arrondies au millième de degré aux

@@ -436,7 +436,23 @@ export function initializeMap(containerId) {
     getVisibleBounds: visibleBounds,
     getWeatherCenter() {
       const center = map.getCenter();
-      return { latitude: center.lat, longitude: ((center.lng + 180) % 360 + 360) % 360 - 180 };
+      // Use settlement labels already available in the current online/offline map.
+      // A nearby label is not an administrative reverse-geocoding result.
+      let nearest = null;
+      try {
+        for (const feature of map.queryRenderedFeatures()) {
+          if (!['place', 'places'].includes(feature.sourceLayer) || feature.geometry?.type !== 'Point') continue;
+          const properties = feature.properties || {};
+          const kind = properties.class || properties.kind;
+          if (!['city', 'town', 'village', 'hamlet', 'locality'].includes(kind)) continue;
+          const name = properties['name:fr'] || properties.name;
+          if (typeof name !== 'string' || !name.trim()) continue;
+          const distance = center.distanceTo(maplibregl.LngLat.convert(feature.geometry.coordinates));
+          if (distance <= 25000 && (!nearest || distance < nearest.distance)) nearest = { name, distance };
+        }
+      } catch { /* Labels may be unavailable while the map style is loading. */ }
+      return { latitude: center.lat, longitude: ((center.lng + 180) % 360 + 360) % 360 - 180,
+        name: nearest ? `Près de ${nearest.name}` : 'Centre de la carte' };
     },
     showOfflineRegion(zone) {
       manualZone = zone;

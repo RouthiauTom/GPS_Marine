@@ -1,4 +1,4 @@
-import { VENDEE, WEATHER_FRESH_MS, weatherPoint, weatherKey, fetchForecast, forecastRows, directionText } from './weather-data.mjs';
+import { WEATHER_FRESH_MS, weatherPoint, weatherKey, fetchForecast, forecastRows, directionText } from './weather-data.mjs';
 import { isUsablePosition } from './gps.js';
 
 export function initializeWeather(map, getPosition) {
@@ -6,18 +6,16 @@ export function initializeWeather(map, getPosition) {
   const dialog = $('weather-dialog');
   const cacheKey = `marine-gps-weather:${new URL('../', import.meta.url).pathname}`;
   let snapshots = {};
-  let lastPoint = null;
   try {
     const saved = JSON.parse(localStorage.getItem(cacheKey));
     if (saved?.version === 1 && Array.isArray(saved.entries)) {
-      if (saved.selected) lastPoint = weatherPoint(saved.selected);
       for (const entry of saved.entries.slice(0, 6)) {
         const point = weatherPoint(entry.point);
         if ([entry.wind, entry.sea].every(part => !part || (Number.isFinite(part.fetchedAt) && Array.isArray(part.rows) && part.rows.length <= 200 && part.rows.every(row => row && Number.isFinite(row.time))))) snapshots[weatherKey(point)] = { ...entry, point };
       }
     }
   } catch { /* Weather can still be displayed without persistence. */ }
-  let selected = lastPoint || { ...VENDEE };
+  let selected = weatherPoint(map.getWeatherCenter());
   let request = null;
   let generation = 0;
   let notice = '';
@@ -90,12 +88,11 @@ export function initializeWeather(map, getPosition) {
     if (next.wind || next.sea) { snapshots[key] = next; save(); }
     render();
   }
-  $('open-weather').addEventListener('click', () => { dialog.showModal(); void load(selected); });
+  $('open-weather').addEventListener('click', () => { dialog.showModal(); void load(map.getWeatherCenter()); });
   $('close-weather').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => { ++generation; request?.abort(); request = null; });
   $('weather-refresh').addEventListener('click', () => void load(selected, true));
-  $('weather-vendee').addEventListener('click', () => void load(VENDEE));
-  $('weather-center').addEventListener('click', () => void load({ ...map.getWeatherCenter(), name: 'Centre de la carte' }));
+  $('weather-center').addEventListener('click', () => void load(map.getWeatherCenter()));
   $('weather-boat').addEventListener('click', () => {
     const point = getPosition();
     if (isUsablePosition(point)) void load({ ...point, name: 'Position du bateau' });
