@@ -1,3 +1,4 @@
+import { initializeDeparture } from './departure.js';
 import { initializeWeather } from './weather.js';
 import { initializeDisplay } from './display.js';
 import { updateDeviation, createSimulator } from './navigation-tools.mjs';
@@ -5,9 +6,10 @@ import { initializePwa } from './pwa.js';
 import { initializeOfflineMaps } from './offline-maps-ui.js';
 import { startWatching, stopWatching, isFreshPosition, isUsablePosition } from './gps.js';
 import { computeRouteNavigation, advanceNavigation } from './navigation.mjs';
-import { initializeMap } from './map.js?v=1.7.1';
+import { initializeMap } from './map.js?v=1.8.0';
 import {
   addTrackPoint,
+  interruptTracking,
   clearTrack,
   getCurrentTrack,
   isTracking,
@@ -70,6 +72,7 @@ try {
 
 let trackBusy = false;
 let trackSaveQueue = Promise.resolve(true);
+let trackSaveTimer = null;
 let lastTrackSave = 0;
 let lastTrackRender = 0;
 const sessionTracks = new Map();
@@ -121,7 +124,15 @@ function updateTrackControls() {
 
 function persistTrack(track, immediate = true) {
   if (!track) return Promise.resolve(false);
-  if (!immediate && Date.now() - lastTrackSave < 5000) return trackSaveQueue;
+  if (!immediate && Date.now() - lastTrackSave < 5000) {
+    if (trackSaveTimer === null) trackSaveTimer = setTimeout(() => {
+      trackSaveTimer = null;
+      if (!trackBusy) void persistTrack(getCurrentTrack());
+    }, Math.max(0, 5000 - (Date.now() - lastTrackSave)));
+    return trackSaveQueue;
+  }
+  clearTimeout(trackSaveTimer);
+  trackSaveTimer = null;
   lastTrackSave = Date.now();
   const snapshot = { ...track, points: [...track.points] };
   trackSaveQueue = trackSaveQueue.then(async () => {
@@ -700,12 +711,16 @@ function updateGpsHealth() {
   const fresh = isFreshPosition(latestPosition);
   const usable = isUsablePosition(latestPosition) && !gpsError;
   document.body.classList.toggle('gps-unreliable', !usable);
+  if (!usable && isTracking()) {
+    interruptTracking();
+    if (trackStorageAvailable) setTrackStatus('Enregistrement suspendu · attente d’un GPS fiable');
+  }
   map.setGpsStale(!usable);
   const age = latestPosition ? Math.max(0, Math.floor((Date.now() - latestPosition.timestamp) / 1000)) : null;
   getElement('status').textContent = (gpsError ? `${gpsError}${age === null ? '' : ` · dernière position il y a ${age} s`}` : '') || (!latestPosition ? 'GPS : attente de position…' :
     !fresh ? `GPS perdu · dernière position il y a ${age} s` :
     !usable ? `GPS imprécis · ± ${Math.round(latestPosition.accuracy)} m` :
-    `GPS actif · position il y a ${age} s`);
+    `GPS actif · ± ${Math.round(latestPosition.accuracy)} m · il y a ${age} s`);
   if (!usable) {
     ['speed-bottom', 'course', 'xte', 'dtw', 'brg', 'eta'].forEach(id => { getElement(id).textContent = '—'; });
   }
@@ -1132,7 +1147,7 @@ async function initializeTrack() {
     if (savedTrack) {
       const track = restoreTrack(savedTrack);
       map.updateTrack(track);
-      setTrackStatus(`Dernière trace chargée · ${track.points.length} points`);
+      setTrackStatus(`Trace restaurée en pause · ${track.points.length} points`);
     }
   } catch {
     trackStorageAvailable = false;
@@ -1181,6 +1196,7 @@ initializeRoutes();
 startRealGps();
 initializePwa();
 initializeOfflineMaps(map);
+initializeDeparture(map, () => !simulation && !gpsError ? latestPosition : null);
 initializeWeather(map, () => !simulation && !gpsError ? latestPosition : null);
 
 function startRealGps() {

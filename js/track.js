@@ -31,6 +31,10 @@ export function stopTracking() {
   return currentTrack;
 }
 
+export function interruptTracking() {
+  if (tracking) newSegment = true;
+}
+
 export function addTrackPoint(position) {
   if (!tracking) return currentTrack;
 

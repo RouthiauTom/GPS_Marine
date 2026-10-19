@@ -147,3 +147,29 @@ body #weather-dialog a { color: var(--tint); }
 .weather-tides { display: inline-block; padding: 12px 0; }
 
 #weather-dialog summary { color: var(--tint); cursor: pointer; padding: 12px 0; font-size: 13px; }
+
+/* Signal quality remains distinguishable without relying on colour alone. */
+body .map-notices #status::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: #23945c; }
+body.gps-unreliable .map-notices #status::before { background: #d67a20; }
+body.simulating .map-notices #status::before { background: #888; }
+
+/* Settings is a full-screen destination with a dedicated return to the map. */
+body #settings-dialog {
+  inset: 0; width: 100%; max-width: none; height: 100%; max-height: none;
+  box-sizing: border-box; margin: 0; border: 0; border-radius: 0;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background: var(--surface); color: var(--ink); box-shadow: none;
+}
+body #settings-dialog .sheet-heading { position: sticky; top: 0; z-index: 1; background: var(--surface); padding: 16px 20px; border-bottom: 1px solid var(--line); }
+body #settings-dialog #close-settings { width: auto; padding: 8px 12px; font-size: 15px; color: var(--tint); }
+.settings-content { max-width: 640px; margin: auto; padding: 8px 20px 30px; }
+.settings-content p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.settings-content h3 { margin-top: 26px; font-size: 18px; }
+.departure-list { background: var(--cell); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.departure-list > div { padding: 15px; }
+.departure-list > div + div { border-top: 1px solid var(--line); }
+.departure-list dt { font-weight: 600; font-size: 14px; }
+.departure-list dd { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.departure-list [data-ready]::before { content: 'À vérifier · '; color: #a75e16; }
+.departure-list [data-ready="true"]::before { content: '✓ '; color: var(--tint); }
+.departure-actions { display: flex; flex-wrap: wrap; gap: 8px; }

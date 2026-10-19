@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startTracking, stopTracking, addTrackPoint, clearTrack, restoreTrack } from '../js/track.js';
+import { startTracking, interruptTracking, stopTracking, addTrackPoint, clearTrack, restoreTrack } from '../js/track.js';
 const fix = timestamp => ({ latitude: 49, longitude: -2, accuracy: 5, timestamp });
 test('pause, resume and GPS gaps create separate segments without dropping points', () => {
   clearTrack(); startTracking();
@@ -15,4 +15,12 @@ test('resuming a restored segmented trace starts a new segment', () => {
   clearTrack(); restoreTrack({ id: 'test', points: [{ ...fix(1000), segment: 3 }] });
   startTracking(); assert.equal(addTrackPoint(fix(2000)).points.at(-1).segment, 4);
   clearTrack(); startTracking(); assert.equal(addTrackPoint(fix(1000)).points[0].segment, 0);
+});
+
+test('a brief GPS interruption splits the trace even below the age threshold', () => {
+  clearTrack(); startTracking(); addTrackPoint(fix(1000));
+  interruptTracking(); interruptTracking();
+  const track = addTrackPoint(fix(2000));
+  assert.deepEqual(track.points.map(p => p.segment), [0, 1]);
+  clearTrack();
 });

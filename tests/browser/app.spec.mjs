@@ -337,3 +337,43 @@ test('unsupported screen lock keeps night mode available', async ({ page }) => {
   await page.locator('#night-mode').check();
   await expect(page.locator('body')).toHaveClass(/night-mode/);
 });
+
+test('GPS errors split recording and the final fix is saved without another GPS callback', async ({ page }) => {
+  await page.clock.install();
+  await page.locator('#track-record').click();
+  await fix(page);
+  await page.evaluate(() => window.gpsFailure({ code: 2 }));
+  await expect(page.locator('#track-status')).toContainText('suspendu');
+  await page.clock.fastForward(1000);
+  await page.evaluate(() => window.gpsSuccess({ coords: { latitude: 49.35, longitude: -1.6999, accuracy: 5, speed: 1, heading: 90 }, timestamp: Date.now() }));
+  await expect(page.locator('#status')).toContainText('± 5 m');
+  await page.clock.fastForward(5000);
+  await expect.poll(async () => page.evaluate(async () => {
+    const tracks = await (await import('/js/storage.js')).loadTracks();
+    return tracks[0]?.points.map(p => p.segment);
+  })).toEqual([0, 1]);
+  await page.reload();
+  await expect(page.locator('#track-status')).toContainText('Trace restaurée en pause · 2 points');
+  await expect(page.locator('#track-record')).toHaveAttribute('aria-label', 'Reprendre l’enregistrement');
+});
+
+test('settings fills the mobile screen and reports local departure data honestly', async ({ page }) => {
+  await page.locator('#open-settings').click();
+  await expect(page.locator('#departure-map')).toContainText('non couverte');
+  await expect(page.locator('#departure-data')).toContainText('0 route(s)');
+  await expect(page.locator('#departure-weather')).toContainText('Aucune météo');
+  await expect(page.locator('#departure-gps')).toContainText('En attente');
+  await fix(page);
+  await expect(page.locator('#departure-gps')).toContainText('± 5 m');
+  await page.evaluate(async () => (await import('/js/storage.js')).saveRoute({ id: 'departure', name: 'Sortie', createdAt: Date.now(), points: [{ latitude: 49.35, longitude: -1.7 }] }));
+  await page.locator('#departure-refresh').click();
+  await expect(page.locator('#departure-data')).toContainText('1 route(s)');
+  await page.waitForTimeout(400);
+  const box = await page.locator('#settings-dialog').boundingBox();
+  expect(box.x).toBe(0); expect(box.y).toBe(0);
+  expect(box.width).toBe(390); expect(box.height).toBe(844);
+  await page.screenshot({ path: 'test-results/settings-page.png' });
+  await page.locator('#close-settings').click();
+  await expect(page.locator('#settings-dialog')).not.toBeVisible();
+  await expect(page.locator('#open-settings')).toBeFocused();
+});

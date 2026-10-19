@@ -16,8 +16,8 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.7.1">
-  <link rel="stylesheet" href="./css/interface.css?v=1.7.1">
+  <link rel="stylesheet" href="./css/app.css?v=1.8.0">
+  <link rel="stylesheet" href="./css/interface.css?v=1.8.0">
 </head>
 
 <body>
@@ -300,11 +300,25 @@
   <dialog id="settings-dialog" class="app-dialog" aria-labelledby="settings-title">
     <div class="sheet-heading">
       <h2 id="settings-title">Réglages</h2>
-      <button id="close-settings" class="icon-button" type="button" aria-label="Fermer">×</button>
+      <button id="close-settings" class="icon-button" type="button" aria-label="Retour à la carte">← Carte</button>
     </div>
+    <div class="settings-content">
+    <p class="settings-intro">Votre sortie, votre affichage, vos cartes.</p>
+    <h3>Avant le départ</h3>
+    <p>Ce bilan concerne la zone visible et la météo au centre de la carte. Il ne vérifie pas la couverture de toute une route.</p>
+    <dl class="departure-list">
+      <div><dt>Carte hors connexion</dt><dd id="departure-map">À vérifier</dd></div>
+      <div><dt>Routes et repères</dt><dd id="departure-data">À vérifier</dd></div>
+      <div><dt>Météo sauvegardée</dt><dd id="departure-weather-status"><span id="departure-weather">À vérifier</span></dd></div>
+      <div><dt>Réception GPS</dt><dd id="departure-gps">À vérifier</dd></div>
+    </dl>
+    <p>La présence d’une zone téléchargée ne garantit pas que toutes ses tuiles sont encore disponibles. Vérifiez son affichage en mode avion avant le départ.</p>
+    <div class="departure-actions"><button id="departure-refresh" type="button">Vérifier à nouveau</button><button id="departure-open-weather" type="button">Voir la météo</button></div>
+    <h3>Préférences et stockage</h3>
     <div class="settings-options">
       <button id="menu-display" type="button">Écran et mode nuit</button>
       <button id="menu-offline" type="button">Installation / hors ligne</button>
+    </div>
     </div>
   </dialog>
 
@@ -368,6 +382,6 @@
     <p>Conservez cette page ouverte pendant le téléchargement. Testez la zone en mode avion avant le départ. Le navigateur peut effacer les cartes en cas de manque de place ; vos exports GPX restent indispensables.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.7.1"></script>
+  <script type="module" src="./js/app.js?v=1.8.0"></script>
 </body>
 </html>

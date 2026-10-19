@@ -121,7 +121,9 @@ affichées sont uniquement celles du test. Tout fonctionne aussi hors connexion.
 - Le point cible et le segment actif sont jaunes ; les repères personnels restent visibles.
 - Le bouton **◎** recentre la carte sur la dernière position connue.
 
-L'état GPS est toujours visible. Après 15 secondes sans position fraîche, en cas
+L'état GPS est toujours visible, avec un indicateur vert/orange, la précision et
+l’âge de la position valide. Une interruption affiche « Enregistrement suspendu »
+jusqu’au retour d’une position fiable. La trace restaurée reste en pause. Après 15 secondes sans position fraîche, en cas
 d'erreur ou au-delà de 50 m de précision annoncée, les instruments deviennent
 indisponibles. Les positions imprécises ne sont pas enregistrées et ne font pas
 avancer la route. La direction calculée n'est utilisée que lorsque le déplacement
@@ -135,7 +137,8 @@ dépasse l'incertitude des positions ; une direction inconnue est représentée 
 - **Créer une route** produit une copie des coordonnées et conserve la trace originale.
   La conversion est refusée pour les traces interrompues afin de ne pas créer de
   liaison fictive entre leurs segments.
-- Une pause/reprise ou un intervalle GPS de plus de 15 secondes ouvre un nouveau segment.
+- Une pause/reprise, une erreur GPS, une position devenue inutilisable ou un intervalle
+  GPS de plus de 15 secondes ouvre un nouveau segment, sans relier la coupure.
 - **Sorties enregistrées**, dans le panneau inférieur déplié, donne accès aux traces
   archivées/importées : affichage, conversion et suppression confirmée.
 - Le menu **GPX** exporte les éléments sélectionnés, y compris les données en mémoire
@@ -146,6 +149,8 @@ dépasse l'incertitude des positions ; une direction inconnue est représentée 
 Le stockage IndexedDB version 4 lit les anciennes traces de la version 3 sans les
 supprimer. À leur prochaine sauvegarde, les points sont écrits par blocs de 256.
 Pendant l'enregistrement, les sauvegardes sont espacées d'au moins 5 secondes ;
+un point reçu dans cet intervalle programme une sauvegarde différée, même si
+aucune nouvelle position ne suit (tant que la page peut exécuter ses tâches).
 une pause, un archivage et le passage de la page en arrière-plan demandent une
 sauvegarde immédiate. La fermeture forcée du navigateur peut perdre les derniers
 points non sauvegardés. L'échec d'un archivage laisse la trace active et exportable.
@@ -286,3 +291,18 @@ Le niveau marin mondial d’Open-Meteo n’est pas utilisé comme table de maré
 documentation précise que sa résolution et sa précision côtière ne conviennent pas
 à la navigation côtière. Aucune estimation de pleine/basse mer ou de hauteur sous
 quille n’est calculée à partir de ces modèles dans cette version.
+
+## Bilan avant départ
+
+Les réglages s’ouvrent en pleine page avec un retour explicite à la carte. Le bilan
+consulte les cartes téléchargées couvrant la zone visible, les routes et waypoints
+lus dans le stockage local, les prévisions sauvegardées au centre de la carte et
+le GPS réel (hors simulation). « Vérifier à nouveau » relit ces informations sans
+requête météo. « Voir la météo » permet de récupérer les prévisions du point.
+La réception GPS est actualisée tant que la page reste ouverte.
+
+La couverture indiquée repose sur une zone marquée comme complètement téléchargée,
+pas sur un contrôle de chaque tuile ni de toute la route. Le bilan invite à vérifier
+l’affichage en mode avion. Les prévisions absentes, partielles, expirées ou récupérées
+il y a plus de 30 minutes sont signalées comme à vérifier. Les comptes de routes et
+repères concernent les données persistées, pas les modifications encore en mémoire.
