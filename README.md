@@ -306,3 +306,11 @@ pas sur un contrôle de chaque tuile ni de toute la route. Le bilan invite à v�
 l’affichage en mode avion. Les prévisions absentes, partielles, expirées ou récupérées
 il y a plus de 30 minutes sont signalées comme à vérifier. Les comptes de routes et
 repères concernent les données persistées, pas les modifications encore en mémoire.
+
+## Accueil
+
+L’ouverture de l’application présente un accueil avec « Ouvrir la carte » et
+« Préparer ma sortie » (bilan avant départ et réglages). Les réglages permettent
+également de revenir à l’accueil. Le lien `#carte` conserve l’accès direct à la carte
+lors d’un rechargement en cours de sortie. L’accueil est inclus dans le cache hors
+ligne et suit le mode nuit. Le retour à l’accueil n’arrête pas une trace en cours.

@@ -1,0 +1,21 @@
+import { test, expect } from '@playwright/test';
+test('welcome opens before the map and links to preparation and back', async ({ page }) => {
+  await page.route('https://tiles.openfreemap.org/**', route => route.fulfill({ json: { version: 8, sources: {}, layers: [] } }));
+  await page.route('https://tiles.openseamap.org/**', route => route.abort());
+  await page.goto('/');
+  await expect(page.locator('#home-page')).toBeVisible();
+  await expect(page.locator('#home-map')).toBeFocused();
+  await page.screenshot({ path: 'test-results/home-mobile.png' });
+  await page.locator('#home-settings').click();
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  await page.locator('#return-home').click();
+  await expect(page.locator('#home-page')).toBeVisible();
+  await page.locator('#home-map').click();
+  await expect(page.locator('#home-page')).not.toBeVisible();
+  await expect(page).toHaveURL(/#carte$/);
+  await page.reload();
+  await expect(page.locator('#home-page')).not.toBeVisible();
+  await page.locator('#open-settings').click();
+  await page.locator('#return-home').click();
+  await expect(page.locator('#home-page')).toBeVisible();
+});

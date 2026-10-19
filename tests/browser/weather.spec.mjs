@@ -15,7 +15,7 @@ async function prepare(context, page, sea = 1.5) {
   await context.route('https://api.open-meteo.com/**', route => route.fulfill({ json: response('wind') }));
   await context.route('https://marine-api.open-meteo.com/**', route => route.fulfill({ json: response('sea', sea) }));
   await page.route('**/js/map.js*', async route => route.fulfill({ contentType: 'text/javascript', body: (await readFile('js/map.js', 'utf8')).replace('const map = new maplibregl.Map', 'const map = window.testMap = new maplibregl.Map') }));
-  await page.goto('/');
+  await page.goto('/#carte');
   await expect(page.locator('#offline-status')).toContainText('Application prête');
   await page.locator('#open-weather').click();
   await expect(page.locator('#weather-wind-now')).toHaveText('12 nd');

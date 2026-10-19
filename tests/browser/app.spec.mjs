@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
     contentType: 'text/javascript',
     body: (await readFile('js/map.js', 'utf8')).replace('const map = new maplibregl.Map', 'const map = window.testMap = new maplibregl.Map')
   }));
-  await page.goto('/');
+  await page.goto('/#carte');
   await expect(page.locator('#track-record')).toBeEnabled();
   await page.waitForFunction(() => typeof window.gpsSuccess === 'function');
   await page.waitForFunction(() => window.testMap?.getLayer('navigation-target-point') && window.testMap?.getSource('gps-track'));

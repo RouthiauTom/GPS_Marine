@@ -10,7 +10,7 @@ async function prepare(context, page, prefix = '/') {
       watchPosition(success) { window.gpsSuccess = success; return 1; }, clearWatch() {}
     } });
   });
-  await page.goto(prefix);
+  await page.goto(`${prefix}#carte`);
   await expect(page.locator('#track-record')).toBeEnabled();
   await expect(page.locator('#offline-status')).toContainText('Application prête hors connexion', { timeout: 15000 });
   await expect(page.locator('#offline-update')).toHaveAttribute('hidden', '');
@@ -44,6 +44,8 @@ for (const prefix of ['/', '/marine/']) {
     const errors = [];
     reopened.on('pageerror', e => errors.push(e.message));
     const response = await reopened.goto(prefix);
+    await expect(reopened.locator('#home-page')).toBeVisible();
+    await reopened.locator('#home-map').click();
     expect(response.fromServiceWorker()).toBe(true);
     await expect(reopened.locator('#track-record')).toBeEnabled();
     await expect(reopened.locator('#map-status')).toContainText('sans fond de carte');
@@ -101,7 +103,7 @@ test('missing cached asset is reported as incomplete rather than ready', async (
 test('installation failure never announces offline readiness', async ({ context, page }) => {
   await context.route('**/icons/app-512.png', route => route.fulfill({ status: 503, body: 'Unavailable' }));
   await context.route('https://tiles.openfreemap.org/**', route => route.abort());
-  await page.goto('/');
+  await page.goto('/#carte');
   await expect(page.locator('#track-record')).toBeEnabled();
   await expect(page.locator('#offline-status')).toContainText(/interrompue|impossible/, { timeout: 15000 });
   expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(false);

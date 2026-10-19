@@ -49,7 +49,7 @@ async function prepare(context, page, { prefix = '/', failTile = false, changeVe
       'access-control-allow-origin': '*', 'access-control-expose-headers': '*'
     } });
   });
-  await page.goto(prefix);
+  await page.goto(`${prefix}#carte`);
   await expect(page.locator('#offline-status')).toContainText('Application prête hors connexion');
   await openMaps(page);
   await page.locator('#map-detail').selectOption('10');
@@ -78,7 +78,7 @@ for (const prefix of ['/', '/marine/']) {
     await page.close();
     page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(prefix);
+    await page.goto(`${prefix}#carte`);
     await expect(page.locator('#map-status')).toContainText('Carte locale');
     await expect(page.locator('#map-status')).not.toContainText('incomplètes');
     await openMaps(page);
@@ -145,7 +145,7 @@ test('quota failure keeps previously downloaded maps and updates preserve their 
     await expect.poll(() => page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration()).waiting))).toBe(true);
     await page.close();
     page = await context.newPage();
-    await page.goto('/');
+    await page.goto('/#carte');
     await openMaps(page);
     await expect(page.locator('#downloaded-maps li')).toHaveCount(1);
   } finally { await context.request.post('/__test/release', { data: { release: null } }); }
