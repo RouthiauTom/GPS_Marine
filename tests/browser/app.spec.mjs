@@ -377,3 +377,18 @@ test('settings fills the mobile screen and reports local departure data honestly
   await expect(page.locator('#settings-dialog')).not.toBeVisible();
   await expect(page.locator('#open-settings')).toBeFocused();
 });
+
+test('departure identifies uncovered route legs and draws their preview', async ({ page }) => {
+  await page.evaluate(async () => (await import('/js/storage.js')).saveRoute({ id: 'coverage', name: 'Sortie Vendée', createdAt: Date.now(), points: [{ latitude: 46.6, longitude: -2 }, { latitude: 46.7, longitude: -2.1 }] }));
+  await page.locator('#open-settings').click();
+  await expect(page.locator('#departure-route')).toBeEnabled();
+  await page.locator('#departure-route').selectOption('coverage');
+  await expect(page.locator('#departure-coverage')).toContainText('1 → 2');
+  await expect(page.locator('#departure-preview')).toBeVisible();
+  await expect(page.locator('#departure-preview line')).toHaveAttribute('stroke-dasharray', '6 4');
+  await page.locator('#departure-refresh').click();
+  await expect(page.locator('#departure-route')).toHaveValue('coverage');
+  await expect(page.locator('#departure-preview')).toBeVisible();
+  await page.locator('#departure-route').selectOption('');
+  await expect(page.locator('#departure-preview')).not.toBeVisible();
+});

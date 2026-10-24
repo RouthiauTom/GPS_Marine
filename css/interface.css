@@ -194,3 +194,6 @@ body.night-mode #home-page { background: radial-gradient(ellipse at 90% 0%, #173
 .home-actions #home-map { background: #19745a; color: white; border-color: transparent; }
 .home-detail { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 20px 0 40px; }
 .home-content footer { color: var(--muted); font-size: 11px; }
+#departure-route { display: block; width: 100%; margin-top: 8px; padding: 10px; }
+#departure-preview { width: 100%; height: 180px; background: var(--cell); border: 1px solid var(--line); border-radius: 16px; }
+#departure-preview[hidden] { display: none; }

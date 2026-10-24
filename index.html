@@ -16,8 +16,8 @@
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="./css/app.css?v=1.9.0">
-  <link rel="stylesheet" href="./css/interface.css?v=1.9.0">
+  <link rel="stylesheet" href="./css/app.css?v=1.10.0">
+  <link rel="stylesheet" href="./css/interface.css?v=1.10.0">
 </head>
 
 <body>
@@ -319,7 +319,12 @@
     <div class="settings-content">
     <p class="settings-intro">Votre sortie, votre affichage, vos cartes.</p>
     <h3>Avant le départ</h3>
-    <p>Ce bilan concerne la zone visible et la météo au centre de la carte. Il ne vérifie pas la couverture de toute une route.</p>
+    <p>Vérifiez la zone visible, ou choisissez une route sauvegardée pour contrôler ses étapes. La météo concerne le centre de la carte.</p>
+    <label for="departure-route">Route à préparer</label>
+    <select id="departure-route"><option value="">Zone visible uniquement</option></select>
+    <p id="departure-coverage" role="status"></p>
+    <svg id="departure-preview" viewBox="0 0 320 180" role="img" aria-label="Aperçu de la couverture : vert continu pour les portions couvertes, orange pointillé pour les portions non couvertes" hidden></svg>
+    <p id="departure-legend" hidden>Aperçu schématique · vert : couvert · orange pointillé : à télécharger. Les numéros correspondent aux points de la route.</p>
     <dl class="departure-list">
       <div><dt>Carte hors connexion</dt><dd id="departure-map">À vérifier</dd></div>
       <div><dt>Routes et repères</dt><dd id="departure-data">À vérifier</dd></div>
@@ -397,6 +402,6 @@
     <p>Conservez cette page ouverte pendant le téléchargement. Testez la zone en mode avion avant le départ. Le navigateur peut effacer les cartes en cas de manque de place ; vos exports GPX restent indispensables.</p>
   </dialog>
 
-  <script type="module" src="./js/app.js?v=1.9.0"></script>
+  <script type="module" src="./js/app.js?v=1.10.0"></script>
 </body>
 </html>

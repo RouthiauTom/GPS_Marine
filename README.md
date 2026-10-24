@@ -302,7 +302,7 @@ requête météo. « Voir la météo » permet de récupérer les prévisions du
 La réception GPS est actualisée tant que la page reste ouverte.
 
 La couverture indiquée repose sur une zone marquée comme complètement téléchargée,
-pas sur un contrôle de chaque tuile ni de toute la route. Le bilan invite à vérifier
+pas sur un contrôle de chaque tuile. Le bilan invite à vérifier
 l’affichage en mode avion. Les prévisions absentes, partielles, expirées ou récupérées
 il y a plus de 30 minutes sont signalées comme à vérifier. Les comptes de routes et
 repères concernent les données persistées, pas les modifications encore en mémoire.
@@ -314,3 +314,14 @@ L’ouverture de l’application présente un accueil avec « Ouvrir la carte »
 également de revenir à l’accueil. Le lien `#carte` conserve l’accès direct à la carte
 lors d’un rechargement en cours de sortie. L’accueil est inclus dans le cache hors
 ligne et suit le mode nuit. Le retour à l’accueil n’arrête pas une trace en cours.
+
+### Couverture d’une route
+
+Dans le bilan, choisissez une route sauvegardée : l’aperçu schématique montre
+les portions couvertes en vert et les portions manquantes en orange pointillé,
+avec les numéros des points. Plusieurs zones complètes peuvent couvrir ensemble
+un segment ; les trous entre zones sont détectés même si les deux extrémités sont
+couvertes. Le calcul suit les segments droits de la carte en projection Mercator.
+Les passages du méridien ±180° et les latitudes au-delà de 85° sont signalés comme
+non vérifiables. Le contrôle porte sur les emprises téléchargées, sans garantie
+de présence de chaque tuile, de détail suffisant ou de sécurité de la route.
