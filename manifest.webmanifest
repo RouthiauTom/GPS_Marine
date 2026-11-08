@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Marine GPS",
-  "short_name": "Marine GPS",
-  "description": "GPS, routes, repères et traces de navigation conservés sur cet appareil.",
+  "name": "TOMANON — Compagnon de bord",
+  "short_name": "TOMANON",
+  "description": "Le compagnon de bord de TOMANON : cartes, routes, repères et traces de vos sorties en mer.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
@@ -10,8 +10,23 @@
   "background_color": "#152522",
   "theme_color": "#152522",
   "icons": [
-    { "src": "./icons/app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./icons/app.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    {
+      "src": "./icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ]
 }

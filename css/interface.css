@@ -197,3 +197,11 @@ body.night-mode #home-page { background: radial-gradient(ellipse at 90% 0%, #173
 #departure-route { display: block; width: 100%; margin-top: 8px; padding: 10px; }
 #departure-preview { width: 100%; height: 180px; background: var(--cell); border: 1px solid var(--line); border-radius: 16px; }
 #departure-preview[hidden] { display: none; }
+
+.home-content .home-gift { margin: 0 0 18px; font-size: 13px; line-height: 1.65; color: var(--muted); }
+.home-gift strong { color: var(--tint); font-weight: 600; }
+@media (max-height: 700px) {
+  .home-emblem { width: 88px; height: 88px; margin-bottom: 16px; }
+  .home-intro { margin-bottom: 24px; }
+  .home-detail { margin-bottom: 24px; }
+}

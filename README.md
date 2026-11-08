@@ -325,3 +325,12 @@ couvertes. Le calcul suit les segments droits de la carte en projection Mercator
 Les passages du méridien ±180° et les latitudes au-delà de 85° sont signalés comme
 non vérifiables. Le contrôle porte sur les emprises téléchargées, sans garantie
 de présence de chaque tuile, de détail suffisant ou de sécurité de la route.
+
+## Édition TOMANON
+
+L’accueil, le titre et le nom d’installation Android sont personnalisés pour
+TOMANON — Compagnon de bord, avec un emblème de bateau et un message de Noël.
+Le manifeste conserve son identifiant et son périmètre pour préserver la même
+installation. Les clés de stockage restent inchangées : les routes, traces,
+repères et réglages existants sont conservés. Les icônes PNG sont déclinées
+depuis `icons/app.svg` (192, 512 et 180 pixels).
